@@ -36,7 +36,7 @@ const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist:
 #ifdef ESP32
 String wlanName, wlanPass, githubToken;   // tatsächlich benutzte Werte (aus den Zeilen oben oder aus dem Speicher)
 #endif
-const int   FIRMWARE_VERSION = 2;    // wird bei jeder neuen Version hochgezählt
+const char* FIRMWARE_VERSION = "2.1";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 8000;   // so lange wird aufs WLAN gewartet, dann wird es abgeschaltet
 
@@ -189,6 +189,13 @@ void updateAnzeige(int ms) {   // alle LEDs pulsieren blau, solange geladen wird
   strip.show();
 }
 
+// "2.1" -> 201, damit sich Versionen vergleichen lassen
+int versionsZahl(const String& v) {
+  int punkt = v.indexOf('.');
+  if (punkt < 0) return v.toInt() * 100;
+  return v.substring(0, punkt).toInt() * 100 + v.substring(punkt + 1).toInt();
+}
+
 void updatePruefen() {
   WiFiClientSecure client;
   client.setInsecure();            // kein Zertifikats-Check, reicht für eine Laterne
@@ -197,12 +204,13 @@ void updatePruefen() {
   if (!http.begin(client, String(UPDATE_URL) + "version.txt")) return;
   if (githubToken.length()) http.addHeader("Authorization", "token " + githubToken);
   int code = http.GET();
-  int neu = code == 200 ? http.getString().toInt() : -1;
+  String neu = code == 200 ? http.getString() : String("");
+  neu.trim();
   http.end();
-  Serial.printf("Update: Server-Version %d, eigene %d (HTTP %d)\n", neu, FIRMWARE_VERSION, code);
+  Serial.printf("Update: GitHub-Version %s, eigene %s (HTTP %d)\n", neu.c_str(), FIRMWARE_VERSION, code);
   if (code != 200) { wlanErgebnis += ", GitHub nicht erreichbar (HTTP " + String(code) + ")"; return; }
-  wlanErgebnis += ", GitHub-Version " + String(neu);
-  if (neu <= FIRMWARE_VERSION) return;
+  wlanErgebnis += ", GitHub-Version " + neu;
+  if (versionsZahl(neu) <= versionsZahl(FIRMWARE_VERSION)) return;
 
   Serial.println("Update: lade neue Firmware ...");
   httpUpdate.rebootOnUpdate(true);
@@ -248,13 +256,13 @@ void statusZeile() {
   static uint32_t next = 0;
   if ((int32_t)(millis() - next) < 0) return;
   next = millis() + 5000;
-  Serial.printf("Pfeil läuft, Firmware %d, %lu s an, %s\n", FIRMWARE_VERSION, (unsigned long)(millis() / 1000), wlanStatusText());
+  Serial.printf("Pfeil läuft, Firmware %s, %lu s an, %s\n", FIRMWARE_VERSION, (unsigned long)(millis() / 1000), wlanStatusText());
 }
 
 void setup() {
   Serial.begin(115200);
   delay(300);
-  Serial.printf("\nPfeil startet, Firmware %d\n", FIRMWARE_VERSION);
+  Serial.printf("\nPfeil startet, Firmware %s\n", FIRMWARE_VERSION);
   pinMode(PIN_FEUER, INPUT_PULLUP);
   pinMode(PIN_TURBO, INPUT_PULLUP);
   strip.begin();
