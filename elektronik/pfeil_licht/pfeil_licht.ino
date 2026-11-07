@@ -221,13 +221,29 @@ void wlanTick() {
     wlanAus();
   }
 }
+const char* wlanStatusText() {
+  if (wlanName.length() == 0) return "kein WLAN eingetragen";
+  if (wlanOffen) return "suche WLAN ...";
+  return "WLAN-Suche beendet";
+}
 #else
 void wlanStart() {}
 void wlanTick() {}
+const char* wlanStatusText() { return "kein WLAN (nicht ESP32)"; }
 #endif
+
+// alle 5 Sekunden eine Lebenszeichen-Zeile für den Seriellen Monitor
+void statusZeile() {
+  static uint32_t next = 0;
+  if ((int32_t)(millis() - next) < 0) return;
+  next = millis() + 5000;
+  Serial.printf("Pfeil läuft, Firmware %d, %lu s an, %s\n", FIRMWARE_VERSION, (unsigned long)(millis() / 1000), wlanStatusText());
+}
 
 void setup() {
   Serial.begin(115200);
+  delay(300);
+  Serial.printf("\nPfeil startet, Firmware %d\n", FIRMWARE_VERSION);
   pinMode(PIN_FEUER, INPUT_PULLUP);
   pinMode(PIN_TURBO, INPUT_PULLUP);
   strip.begin();
@@ -245,6 +261,7 @@ void loop() {
   uint32_t t = now - bootTime;
   readBtn(feuer); readBtn(turbo);
   wlanTick();
+  statusZeile();
 
   // ---------------- Startsequenz: 0-1,2 s Licht an, ab 1,2 s Triebwerke zünden
   float lightUp = constrain(t / 1200.0f, 0.0f, 1.0f);
