@@ -36,7 +36,7 @@ const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist:
 #ifdef ESP32
 String wlanName, wlanPass, githubToken;   // tatsächlich benutzte Werte (aus den Zeilen oben oder aus dem Speicher)
 #endif
-const char* FIRMWARE_VERSION = "2.1";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "2.2";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 8000;   // so lange wird aufs WLAN gewartet, dann wird es abgeschaltet
 
