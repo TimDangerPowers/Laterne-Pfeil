@@ -150,6 +150,7 @@ void countMode() {
 #ifdef ESP32
 bool wlanOffen = false;
 uint32_t wlanBis = 0;
+String wlanErgebnis = "";   // Ergebnis der WLAN-Suche für die Statuszeile
 
 void zugangLaden() {
   Preferences pref;
@@ -198,7 +199,9 @@ void updatePruefen() {
   int code = http.GET();
   int neu = code == 200 ? http.getString().toInt() : -1;
   http.end();
-  Serial.printf("Update: Server-Version %d, eigene %d\n", neu, FIRMWARE_VERSION);
+  Serial.printf("Update: Server-Version %d, eigene %d (HTTP %d)\n", neu, FIRMWARE_VERSION, code);
+  if (code != 200) { wlanErgebnis += ", GitHub nicht erreichbar (HTTP " + String(code) + ")"; return; }
+  wlanErgebnis += ", GitHub-Version " + String(neu);
   if (neu <= FIRMWARE_VERSION) return;
 
   Serial.println("Update: lade neue Firmware ...");
@@ -206,7 +209,10 @@ void updatePruefen() {
   if (githubToken.length()) httpUpdate.setAuthorization("token " + githubToken);
   httpUpdate.onProgress([](int done, int total) { updateAnzeige(millis()); });
   t_httpUpdate_return r = httpUpdate.update(client, String(UPDATE_URL) + "pfeil_licht.bin");
-  if (r == HTTP_UPDATE_FAILED) Serial.printf("Update fehlgeschlagen: %s\n", httpUpdate.getLastErrorString().c_str());
+  if (r == HTTP_UPDATE_FAILED) {
+    Serial.printf("Update fehlgeschlagen: %s\n", httpUpdate.getLastErrorString().c_str());
+    wlanErgebnis += ", Update fehlgeschlagen: " + httpUpdate.getLastErrorString();
+  }
   // bei Erfolg startet der ESP neu und kommt hier nicht mehr an
 }
 
@@ -214,17 +220,22 @@ void wlanTick() {
   if (!wlanOffen) return;
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("WLAN: verbunden, IP %s\n", WiFi.localIP().toString().c_str());
+    wlanErgebnis = "WLAN verbunden (" + WiFi.localIP().toString() + ")";
     updatePruefen();
     wlanAus();
   } else if ((int32_t)(millis() - wlanBis) > 0) {
-    Serial.println("WLAN: nicht gefunden, weiter ohne");
+    wl_status_t st = WiFi.status();
+    wlanErgebnis = st == WL_NO_SSID_AVAIL ? "WLAN '" + wlanName + "' nicht gefunden (nur 2,4 GHz möglich)"
+                 : st == WL_CONNECT_FAILED ? "WLAN-Verbindung abgelehnt (Passwort?)"
+                 : "WLAN nicht verbunden (Status " + String((int)st) + ")";
+    Serial.println("WLAN: " + wlanErgebnis + ", weiter ohne");
     wlanAus();
   }
 }
 const char* wlanStatusText() {
   if (wlanName.length() == 0) return "kein WLAN eingetragen";
   if (wlanOffen) return "suche WLAN ...";
-  return "WLAN-Suche beendet";
+  return wlanErgebnis.c_str();
 }
 #else
 void wlanStart() {}
