@@ -29,6 +29,7 @@
 // ------------------------------------------------------------------ WLAN und Update
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer lassen = kein WLAN, keine Updates.
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei dann nicht weitergeben.)
+const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
 const int   FIRMWARE_VERSION = 2;    // wird bei jeder neuen Version hochgezählt
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 8000;   // so lange wird aufs WLAN gewartet, dann wird es abgeschaltet
@@ -171,6 +172,7 @@ void updatePruefen() {
   HTTPClient http;
   http.setTimeout(4000);
   if (!http.begin(client, String(UPDATE_URL) + "version.txt")) return;
+  if (GITHUB_TOKEN[0]) http.addHeader("Authorization", String("token ") + GITHUB_TOKEN);
   int code = http.GET();
   int neu = code == 200 ? http.getString().toInt() : -1;
   http.end();
@@ -179,6 +181,7 @@ void updatePruefen() {
 
   Serial.println("Update: lade neue Firmware ...");
   httpUpdate.rebootOnUpdate(true);
+  if (GITHUB_TOKEN[0]) httpUpdate.setAuthorization(String("token ") + GITHUB_TOKEN);
   httpUpdate.onProgress([](int done, int total) { updateAnzeige(millis()); });
   t_httpUpdate_return r = httpUpdate.update(client, String(UPDATE_URL) + "pfeil_licht.bin");
   if (r == HTTP_UPDATE_FAILED) Serial.printf("Update fehlgeschlagen: %s\n", httpUpdate.getLastErrorString().c_str());
