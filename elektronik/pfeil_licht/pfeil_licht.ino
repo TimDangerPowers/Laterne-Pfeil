@@ -44,7 +44,7 @@
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
-const char* FIRMWARE_VERSION = "3.1";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "3.2";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 20000;  // so lange wird je Versuch aufs WLAN gewartet
 const uint32_t WLAN_PAUSE_MS  = 120000; // danach Pause, dann neuer Versuch im Hintergrund
@@ -93,8 +93,8 @@ void standardEinstellungen() {
   E.hell = 200;
   E.laser   = 0xFF1E14;   // Rot
   E.turbo   = 0x3C96FF;   // Blau
-  E.flamme1 = 0xC81E00;   // dunkles Rot-Orange
-  E.flamme2 = 0xFFD23C;   // Gelb
+  E.flamme1 = 0xFF0A00;   // Rot (die grüne LED ist viel heller als die rote, darum wenig Grün)
+  E.flamme2 = 0xFF5A00;   // Orange
   E.kanzel  = 0x1478FF;
   E.innen   = 0xFF781E;
 }
@@ -180,8 +180,8 @@ static inline uint32_t mix(uint32_t a, uint32_t b, float m) {
 // Feuerfarbe aus „Hitze“ 0..255: Grundfarbe -> Spitzenfarbe, beim Turbo Richtung Turbofarbe
 uint32_t fireColor(uint8_t h, float turboMix) {
   float m = h / 255.0f;
-  uint32_t c = mix(dim(E.flamme1, 0.25f + 0.75f * m), E.flamme2, m * m);
-  if (h > 235) c = mix(c, 0xFFFFFF, (h - 235) / 20.0f * 0.6f);   // sehr heiß: fast weiß
+  uint32_t c = mix(dim(E.flamme1, 0.2f + 0.8f * m), E.flamme2, m * m);
+  if (h > 245) c = mix(c, 0xFFFFC8, (h - 245) / 10.0f * 0.35f);  // Funke: kurz heller
   if (turboMix > 0) c = mix(c, mix(E.turbo, 0xFFFFFF, m * 0.5f), turboMix);
   return c;
 }
