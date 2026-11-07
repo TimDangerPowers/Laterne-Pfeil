@@ -132,6 +132,9 @@ void readBtn(Btn &b) {
 // Im ausgeschalteten Zustand irgendeinen Knopf drücken: hochfahren in umgekehrter Reihenfolge, Triebwerke zünden langsam.
 enum Zustand { AN, FAEHRT_RUNTER, AUS, FAEHRT_HOCH };
 Zustand zustand = FAEHRT_HOCH;
+// Prototypen ausdrücklich hier: die Arduino-IDE erzeugt ihre eigenen sonst vor diesen Typdefinitionen
+void readBtn(Btn &b);
+void zustandSetzen(Zustand z);
 uint32_t zustandSeit = 0;
 const uint32_t HALTEN_AUS_MS = 1500;
 float lvlKanzel = 0, lvlFront = 0, lvlTriebwerk = 0;   // 0..1 je Gruppe (Front = Innen, Scheinwerfer, Kanonen)
