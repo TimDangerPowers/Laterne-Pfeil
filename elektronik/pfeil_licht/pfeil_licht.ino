@@ -449,7 +449,8 @@ void updatePruefen() {
   client.setInsecure();            // kein Zertifikats-Check, reicht für eine Laterne
   HTTPClient http;
   http.setTimeout(4000);
-  if (!http.begin(client, String(UPDATE_URL) + "version.txt")) return;
+  // ?t=... umgeht den Zwischenspeicher von raw.githubusercontent.com (sonst bis zu 5 Minuten alt)
+  if (!http.begin(client, String(UPDATE_URL) + "version.txt?t=" + String(millis()))) return;
   if (githubToken.length()) http.addHeader("Authorization", "token " + githubToken);
   int code = http.GET();
   String neu = code == 200 ? http.getString() : String("");
@@ -464,7 +465,7 @@ void updatePruefen() {
   httpUpdate.rebootOnUpdate(true);
   if (githubToken.length()) httpUpdate.setAuthorization("token " + githubToken);
   httpUpdate.onProgress([](int done, int total) { updateAnzeige(millis()); });
-  t_httpUpdate_return r = httpUpdate.update(client, String(UPDATE_URL) + "pfeil_licht.bin");
+  t_httpUpdate_return r = httpUpdate.update(client, String(UPDATE_URL) + "pfeil_licht.bin?v=" + neu);
   if (r == HTTP_UPDATE_FAILED) {
     Serial.printf("Update fehlgeschlagen: %s\n", httpUpdate.getLastErrorString().c_str());
     wlanErgebnis += ", Update fehlgeschlagen: " + httpUpdate.getLastErrorString();
