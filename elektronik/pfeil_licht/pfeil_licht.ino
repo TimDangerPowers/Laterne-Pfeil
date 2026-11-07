@@ -3,19 +3,26 @@
   ESP32-C3-Zero (oder SuperMini) im Griff, eine adressierbare WS2812B-Lichterkette (50 LEDs, 10 cm Abstand) im Raumschiff.
 
   Knöpfe:  FEUER  -> Laserkanonen schießen abwechselnd links/rechts (gedrückt halten = Dauerfeuer)
-           TURBO  -> Triebwerke lodern 4 Sekunden hell und blau auf
+           TURBO  -> Triebwerke lodern 4 Sekunden hell auf (Turbofarbe)
   Beim Einschalten läuft eine kurze Startsequenz (Licht an, Triebwerke zünden).
 
-  ZÄHLMODUS (zum Einrichten): beim Einstecken FEUER gedrückt halten.
-    Es leuchtet genau eine LED weiß. FEUER = nächste LED, TURBO = eine zurück.
-    Die Nummer steht im Seriellen Monitor (115200 Baud). Damit füllst du unten die Karte LED_MAP aus.
+  EINSTELLSEITE (Handy oder PC): Der ESP liefert eine Webseite aus, auf der du jede LED zuordnest
+    (sie leuchtet dabei zur Kontrolle) und die Farben von Laser, Turbo und Flammen sowie die Helligkeit einstellst.
+    Alles wird dauerhaft im ESP gespeichert und überlebt Updates.
+      zu Hause:   ESP im Heim-WLAN, Seite unter  http://pfeil.local  (oder die IP aus dem Seriellen Monitor)
+      unterwegs:  TURBO beim Einstecken gedrückt halten -> der ESP macht ein eigenes WLAN „Pfeil-Laterne“
+                  (Passwort pfeil1234) auf, Handy damit verbinden, Seite unter  http://192.168.4.1
+
+  ZÄHLMODUS (Alternative ohne Handy): beim Einstecken FEUER gedrückt halten.
+    Es leuchtet genau eine LED weiß. FEUER = nächste LED, TURBO = eine zurück. Nummer im Seriellen Monitor (115200 Baud).
 
   UPDATE ÜBER WLAN: Trägst du unten WLAN_NAME und WLAN_PASS ein, bucht sich der ESP beim Einschalten
-    für ein paar Sekunden ins Heim-WLAN ein und schaut auf GitHub nach, ob es eine neuere Firmware gibt.
+    ins Heim-WLAN ein und schaut auf GitHub nach, ob es eine neuere Firmware gibt.
     Gibt es eine, lädt er sie (alle LEDs pulsieren dabei blau) und startet neu. Kein WLAN in Reichweite
     (Laternenumzug): nichts passiert, die Lichter laufen sofort. Das allererste Aufspielen geht nur per USB.
 
-  Arduino IDE: Board „ESP32C3 Dev Module“, „USB CDC On Boot: Enabled“.
+  Arduino IDE: Board „ESP32C3 Dev Module“, „USB CDC On Boot: Enabled“,
+               Partition Scheme „Minimal SPIFFS (1.9MB APP with OTA)“ (einmal per USB nötig, ab Firmware 3.0).
   Bibliothek: „Adafruit NeoPixel“ (über den Bibliotheksverwalter installieren).
 */
 #include <Adafruit_NeoPixel.h>
@@ -25,6 +32,8 @@
 #include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
 #include <Preferences.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
 #endif
 
 // ------------------------------------------------------------------ WLAN und Update
@@ -33,25 +42,25 @@
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
-#ifdef ESP32
-String wlanName, wlanPass, githubToken;   // tatsächlich benutzte Werte (aus den Zeilen oben oder aus dem Speicher)
-#endif
-const char* FIRMWARE_VERSION = "2.2";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "3.0";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 8000;   // so lange wird aufs WLAN gewartet, dann wird es abgeschaltet
+const char* AP_NAME = "Pfeil-Laterne";  // eigenes WLAN unterwegs (TURBO beim Einstecken halten)
+const char* AP_PASS = "pfeil1234";
+const char* HOSTNAME = "pfeil";         // -> http://pfeil.local
 
 // ------------------------------------------------------------------ Anschlüsse
 const int PIN_LEDS  = 4;   // Daten zur Lichterkette (über das JST-Verlängerungskabel)
 const int PIN_FEUER = 6;   // Taster gegen GND
 const int PIN_TURBO = 7;   // Taster gegen GND
 
-// ------------------------------------------------------------------ Karte der LEDs
+// ------------------------------------------------------------------ Karte der LEDs (Voreinstellung)
 // Ein Zeichen pro LED in der Reihenfolge der Kette (LED 0 = am Stecker):
 //   K = Kanzel (blau)        I = Innenlicht (warm)      H = Scheinwerfer (weiß)
 //   L = Kanone links         R = Kanone rechts
 //   F = Flamme links         f = Flamme rechts           - = aus (liegt z. B. im Kabelkanal)
-// Mit dem Zählmodus nachsehen, welche LED wo liegt, und die Zeichen hier anpassen.
-const char LED_MAP[] =
+// Die tatsächliche Karte stellst du auf der Einstellseite ein; diese hier gilt nur beim allerersten Start.
+const char LED_MAP_DEFAULT[] =
   "KK"           //  0- 1  unter der Kanzel
   "-L-"          //  2- 4  linker Kabelkanal, Mündung linke Kanone, zurück
   "IF-"          //  5- 7  innen, linke Flamme, zurück
@@ -61,10 +70,32 @@ const char LED_MAP[] =
   "I"            // 15     innen
   "HH"           // 16-17  Scheinwerfer
   "--------------------------------";   // 18-49  Rest der Kette (aus)
-const int NUM = sizeof(LED_MAP) - 1;
+const int NUM = sizeof(LED_MAP_DEFAULT) - 1;
+const char ZONEN[] = "KIHLRFf-";       // erlaubte Zeichen
 
-// ------------------------------------------------------------------ Einstellungen
-const uint8_t  HELLIGKEIT  = 200;    // 0-255, gesamt
+// ------------------------------------------------------------------ Einstellungen (änderbar über die Webseite)
+struct Einstellungen {
+  char     map[NUM + 1];
+  uint8_t  hell;          // Helligkeit 0-255
+  uint32_t laser;         // Laserfarbe
+  uint32_t turbo;         // Turbofarbe (Flammen beim Turbo)
+  uint32_t flamme1;       // Flamme: Grundfarbe (kühler Teil)
+  uint32_t flamme2;       // Flamme: Spitzenfarbe (heißester Teil)
+  uint32_t kanzel;        // Kanzelfarbe
+  uint32_t innen;         // Innenlicht
+} E;
+
+void standardEinstellungen() {
+  strncpy(E.map, LED_MAP_DEFAULT, NUM); E.map[NUM] = 0;
+  E.hell = 200;
+  E.laser   = 0xFF1E14;   // Rot
+  E.turbo   = 0x3C96FF;   // Blau
+  E.flamme1 = 0xC81E00;   // dunkles Rot-Orange
+  E.flamme2 = 0xFFD23C;   // Gelb
+  E.kanzel  = 0x1478FF;
+  E.innen   = 0xFF781E;
+}
+
 const uint16_t MAX_MA      = 1000;   // Stromgrenze für alle LEDs (Powerbank und Kabel schonen)
 const uint16_t TURBO_MS    = 4000;
 const uint16_t SCHUSS_MS   = 380;    // Abstand der Schüsse bei Dauerfeuer
@@ -76,6 +107,9 @@ uint32_t turboUntil = 0, turboStart = 0;
 uint32_t shotStart = 0, nextShot = 0;
 bool shotLeft = true, shotActive = false;
 uint32_t bootTime;
+int testLed = -1;                     // von der Webseite: diese LED weiß zeigen
+uint32_t testBis = 0;
+bool zonenNeu = true;                 // Kanonen-Zonen neu einsammeln
 
 struct Btn { int pin; bool down; bool pressed; uint32_t t; };
 Btn feuer{PIN_FEUER, false, false, 0}, turbo{PIN_TURBO, false, false, 0};
@@ -92,17 +126,23 @@ void readBtn(Btn &b) {
 
 static inline uint8_t qadd(int a) { return a > 255 ? 255 : (a < 0 ? 0 : a); }
 static inline uint32_t rgb(int r, int g, int b) { return strip.Color(qadd(r), qadd(g), qadd(b)); }
+static inline int R(uint32_t c) { return (c >> 16) & 255; }
+static inline int G(uint32_t c) { return (c >> 8) & 255; }
+static inline int B(uint32_t c) { return c & 255; }
+// Farbe c mit Faktor k (0..1) dimmen
+static inline uint32_t dim(uint32_t c, float k) { return rgb(R(c) * k, G(c) * k, B(c) * k); }
+// zwischen zwei Farben überblenden, m = 0..1
+static inline uint32_t mix(uint32_t a, uint32_t b, float m) {
+  return rgb(R(a) * (1 - m) + R(b) * m, G(a) * (1 - m) + G(b) * m, B(a) * (1 - m) + B(b) * m);
+}
 
-// Feuerfarbe aus „Hitze“ 0..255: Rot -> Orange -> Gelb
+// Feuerfarbe aus „Hitze“ 0..255: Grundfarbe -> Spitzenfarbe, beim Turbo Richtung Turbofarbe
 uint32_t fireColor(uint8_t h, float turboMix) {
-  int r, g, b;
-  if (h < 128) { r = h * 2; g = h / 4; b = 0; }
-  else { r = 255; g = 32 + (h - 128) * 1.3; b = (h > 220) ? (h - 220) * 2 : 0; }
-  // Turbo: Richtung Weiß-Blau überblenden
-  r = r * (1 - turboMix) + (120 + h / 3) * turboMix;
-  g = g * (1 - turboMix) + (150 + h / 3) * turboMix;
-  b = b * (1 - turboMix) + 255 * turboMix;
-  return rgb(r, g, b);
+  float m = h / 255.0f;
+  uint32_t c = mix(dim(E.flamme1, 0.25f + 0.75f * m), E.flamme2, m * m);
+  if (h > 235) c = mix(c, 0xFFFFFF, (h - 235) / 20.0f * 0.6f);   // sehr heiß: fast weiß
+  if (turboMix > 0) c = mix(c, mix(E.turbo, 0xFFFFFF, m * 0.5f), turboMix);
+  return c;
 }
 
 // Stromgrenze: grob 20 mA pro voll leuchtendem Farbkanal
@@ -110,22 +150,19 @@ void limitPower() {
   uint32_t sum = 0;
   for (int i = 0; i < NUM; i++) {
     uint32_t c = strip.getPixelColor(i);
-    sum += ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255);
+    sum += R(c) + G(c) + B(c);
   }
   uint32_t ma = sum * 20 / 255;
   if (ma > MAX_MA) {
     float k = (float)MAX_MA / ma;
-    for (int i = 0; i < NUM; i++) {
-      uint32_t c = strip.getPixelColor(i);
-      strip.setPixelColor(i, rgb(((c >> 16) & 255) * k, ((c >> 8) & 255) * k, (c & 255) * k));
-    }
+    for (int i = 0; i < NUM; i++) strip.setPixelColor(i, dim(strip.getPixelColor(i), k));
   }
 }
 
 // Indizes einer Zone sammeln (in Kettenreihenfolge)
 int zone(char z, int *out) {
   int n = 0;
-  for (int i = 0; i < NUM; i++) if (LED_MAP[i] == z) out[n++] = i;
+  for (int i = 0; i < NUM; i++) if (E.map[i] == z) out[n++] = i;
   return n;
 }
 
@@ -141,16 +178,51 @@ void countMode() {
     if (idx > 0) strip.setPixelColor(idx - 1, rgb(0, 0, 20));   // Nachbar zur Orientierung
     strip.show();
     static int last = -1;
-    if (idx != last) { Serial.printf("LED %d  (Karte: '%c')\n", idx, LED_MAP[idx]); last = idx; }
+    if (idx != last) { Serial.printf("LED %d  (Karte: '%c')\n", idx, E.map[idx]); last = idx; }
     delay(10);
   }
 }
 
-// ------------------------------------------------------------------ Update über WLAN
+// ------------------------------------------------------------------ Speichern, WLAN, Update, Webseite
 #ifdef ESP32
-bool wlanOffen = false;
+String wlanName, wlanPass, githubToken;   // tatsächlich benutzte Werte (aus den Zeilen oben oder aus dem Speicher)
+bool wlanOffen = false;                   // Verbindungsversuch läuft
+bool wlanAktiv = false;                   // verbunden oder eigenes WLAN offen -> Webseite erreichbar
+bool apModus = false;
 uint32_t wlanBis = 0;
-String wlanErgebnis = "";   // Ergebnis der WLAN-Suche für die Statuszeile
+String wlanErgebnis = "";                 // Ergebnis der WLAN-Suche für die Statuszeile
+WebServer server(80);
+
+void einstellungenLaden() {
+  Preferences p;
+  p.begin("pfeil", true);
+  standardEinstellungen();
+  String m = p.getString("map", "");
+  if (m.length() == NUM) strncpy(E.map, m.c_str(), NUM);
+  E.hell    = p.getUChar("hell", E.hell);
+  E.laser   = p.getUInt("laser", E.laser);
+  E.turbo   = p.getUInt("turbo", E.turbo);
+  E.flamme1 = p.getUInt("fl1", E.flamme1);
+  E.flamme2 = p.getUInt("fl2", E.flamme2);
+  E.kanzel  = p.getUInt("kanzel", E.kanzel);
+  E.innen   = p.getUInt("innen", E.innen);
+  p.end();
+}
+
+void einstellungenSpeichern() {
+  Preferences p;
+  p.begin("pfeil", false);
+  p.putString("map", E.map);
+  p.putUChar("hell", E.hell);
+  p.putUInt("laser", E.laser);
+  p.putUInt("turbo", E.turbo);
+  p.putUInt("fl1", E.flamme1);
+  p.putUInt("fl2", E.flamme2);
+  p.putUInt("kanzel", E.kanzel);
+  p.putUInt("innen", E.innen);
+  p.end();
+  Serial.println("Einstellungen gespeichert");
+}
 
 void zugangLaden() {
   Preferences pref;
@@ -167,10 +239,131 @@ void zugangLaden() {
   pref.end();
 }
 
+// ---------- Webseite (liegt komplett im Programmspeicher)
+const char SEITE[] PROGMEM = R"HTML(<!doctype html><html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Pfeil</title>
+<style>
+body{margin:0;background:#0b0d12;color:#e8e8ee;font:16px system-ui,sans-serif}
+header{padding:14px 16px;background:#141824;font-weight:700;font-size:18px;display:flex;justify-content:space-between;align-items:center}
+header small{font-weight:400;color:#8a90a8}
+section{padding:14px 16px;border-bottom:1px solid #1e2330}
+h2{margin:0 0 8px;font-size:14px;color:#8a90a8;text-transform:uppercase;letter-spacing:.06em}
+.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
+.led{aspect-ratio:1;border-radius:8px;border:2px solid #2a3040;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;user-select:none}
+.led.sel{outline:3px solid #fff;outline-offset:-1px}
+.zonen{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.z{padding:10px 14px;border-radius:10px;border:2px solid #2a3040;font-weight:700}
+.z.sel{border-color:#fff}
+.zeile{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+input[type=color]{width:56px;height:36px;border:none;background:none}
+input[type=range]{width:60%}
+button{background:#2b6cff;color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:16px;font-weight:700}
+button.sek{background:#2a3040}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+#msg{color:#8a90a8;font-size:14px;margin-top:8px;min-height:18px}
+</style></head><body>
+<header>Pfeil – Einstellungen <small id="ver"></small></header>
+<section><h2>LEDs zuordnen</h2>
+<div style="color:#8a90a8;font-size:14px;margin-bottom:8px">LED antippen (sie leuchtet dann weiß im Schiff), danach unten sagen, was sie ist.</div>
+<div class="grid" id="grid"></div>
+<div class="zonen" id="zonen"></div>
+</section>
+<section><h2>Farben</h2>
+<div class="zeile"><span>Laser</span><input type="color" id="laser"></div>
+<div class="zeile"><span>Turbo</span><input type="color" id="turbo"></div>
+<div class="zeile"><span>Flamme Grundfarbe</span><input type="color" id="fl1"></div>
+<div class="zeile"><span>Flamme Spitze</span><input type="color" id="fl2"></div>
+<div class="zeile"><span>Kanzel</span><input type="color" id="kanzel"></div>
+<div class="zeile"><span>Innenlicht</span><input type="color" id="innen"></div>
+<div class="zeile"><span>Helligkeit</span><input type="range" id="hell" min="20" max="255"></div>
+</section>
+<section><h2>Testen</h2>
+<div class="btns"><button class="sek" onclick="api('fire')">Feuer</button><button class="sek" onclick="api('turbo')">Turbo</button></div>
+</section>
+<section>
+<div class="btns"><button onclick="speichern()">Speichern</button><button class="sek" onclick="laden()">Zurücksetzen</button></div>
+<div id="msg"></div>
+</section>
+<script>
+const ZN={K:['Kanzel','#1478ff'],I:['Innen','#ff781e'],H:['Scheinwerfer','#ddd'],L:['Kanone L','#ff3030'],R:['Kanone R','#ff3030'],F:['Flamme L','#ff9900'],f:['Flamme R','#ffc040'],'-':['aus','#444']};
+let S=null,sel=-1;
+const $=id=>document.getElementById(id);
+const hex=n=>'#'+n.toString(16).padStart(6,'0');
+function api(p,q){return fetch('/api/'+p+(q?'?'+q:''),{method:'POST'}).then(r=>r.json())}
+function zeichnen(){
+ const g=$('grid');g.innerHTML='';
+ for(let i=0;i<S.map.length;i++){const z=S.map[i];const d=document.createElement('div');d.className='led'+(i==sel?' sel':'');
+  d.style.borderColor=ZN[z][1];d.style.color=ZN[z][1];d.textContent=i;d.onclick=()=>{sel=i;api('test','led='+i);zeichnen()};g.appendChild(d)}
+ const zs=$('zonen');zs.innerHTML='';
+ for(const k in ZN){const b=document.createElement('div');b.className='z'+(sel>=0&&S.map[sel]==k?' sel':'');b.style.color=ZN[k][1];b.textContent=ZN[k][0]+' ('+k+')';
+  b.onclick=()=>{if(sel<0){$('msg').textContent='Erst eine LED antippen.';return}S.map=S.map.substring(0,sel)+k+S.map.substring(sel+1);api('map','map='+encodeURIComponent(S.map));sel=Math.min(sel+1,S.map.length-1);api('test','led='+sel);zeichnen()};zs.appendChild(b)}
+}
+function laden(){fetch('/api/state').then(r=>r.json()).then(s=>{S=s;$('ver').textContent='Firmware '+s.version;
+ for(const k of ['laser','turbo','fl1','fl2','kanzel','innen'])$(k).value=hex(s[k]);$('hell').value=s.hell;zeichnen();$('msg').textContent=''})}
+for(const k of ['laser','turbo','fl1','fl2','kanzel','innen','hell'])$(k).oninput=()=>{const v=$(k).value;api('set',k+'='+encodeURIComponent(v))};
+function speichern(){api('save').then(()=>$('msg').textContent='Gespeichert.')}
+laden();
+</script></body></html>)HTML";
+
+String stateJson() {
+  String j = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\",\"map\":\"" + String(E.map) + "\",\"hell\":" + String(E.hell);
+  j += ",\"laser\":" + String(E.laser) + ",\"turbo\":" + String(E.turbo) + ",\"fl1\":" + String(E.flamme1);
+  j += ",\"fl2\":" + String(E.flamme2) + ",\"kanzel\":" + String(E.kanzel) + ",\"innen\":" + String(E.innen) + "}";
+  return j;
+}
+
+uint32_t hexFarbe(String v) {          // "#rrggbb" oder "rrggbb"
+  if (v.startsWith("#")) v = v.substring(1);
+  return (uint32_t)strtoul(v.c_str(), nullptr, 16) & 0xFFFFFF;
+}
+
+void webStart() {
+  server.on("/", HTTP_GET, []() { server.send_P(200, "text/html; charset=utf-8", SEITE); });
+  server.on("/api/state", HTTP_ANY, []() { server.send(200, "application/json", stateJson()); });
+  server.on("/api/test", HTTP_ANY, []() {     // eine LED weiß zeigen
+    testLed = server.arg("led").toInt(); testBis = millis() + 4000;
+    server.send(200, "application/json", "{\"ok\":1}");
+  });
+  server.on("/api/map", HTTP_ANY, []() {
+    String m = server.arg("map");
+    bool ok = m.length() == NUM;
+    for (int i = 0; ok && i < NUM; i++) if (!strchr(ZONEN, m[i])) ok = false;
+    if (ok) { strncpy(E.map, m.c_str(), NUM); zonenNeu = true; }
+    server.send(ok ? 200 : 400, "application/json", ok ? "{\"ok\":1}" : "{\"ok\":0}");
+  });
+  server.on("/api/set", HTTP_ANY, []() {      // Farben und Helligkeit (sofort sichtbar, noch nicht gespeichert)
+    if (server.hasArg("hell"))   { E.hell = constrain(server.arg("hell").toInt(), 20, 255); strip.setBrightness(E.hell); }
+    if (server.hasArg("laser"))  E.laser   = hexFarbe(server.arg("laser"));
+    if (server.hasArg("turbo"))  E.turbo   = hexFarbe(server.arg("turbo"));
+    if (server.hasArg("fl1"))    E.flamme1 = hexFarbe(server.arg("fl1"));
+    if (server.hasArg("fl2"))    E.flamme2 = hexFarbe(server.arg("fl2"));
+    if (server.hasArg("kanzel")) E.kanzel  = hexFarbe(server.arg("kanzel"));
+    if (server.hasArg("innen"))  E.innen   = hexFarbe(server.arg("innen"));
+    server.send(200, "application/json", "{\"ok\":1}");
+  });
+  server.on("/api/fire",  HTTP_ANY, []() { feuer.pressed = true; server.send(200, "application/json", "{\"ok\":1}"); });
+  server.on("/api/turbo", HTTP_ANY, []() { turbo.pressed = true; server.send(200, "application/json", "{\"ok\":1}"); });
+  server.on("/api/save",  HTTP_ANY, []() { einstellungenSpeichern(); server.send(200, "application/json", "{\"ok\":1}"); });
+  server.onNotFound([]() { server.sendHeader("Location", "/"); server.send(302, "text/plain", ""); });
+  server.begin();
+  if (MDNS.begin(HOSTNAME)) MDNS.addService("http", "tcp", 80);
+  wlanAktiv = true;
+}
+
+void apStart() {
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(AP_NAME, AP_PASS);
+  apModus = true;
+  wlanErgebnis = "eigenes WLAN '" + String(AP_NAME) + "' offen, Seite: http://192.168.4.1";
+  Serial.println(wlanErgebnis);
+  webStart();
+}
+
 void wlanStart() {
   zugangLaden();
   if (wlanName.length() == 0) return;
   WiFi.mode(WIFI_STA);
+  WiFi.setHostname(HOSTNAME);
   WiFi.begin(wlanName.c_str(), wlanPass.c_str());
   wlanOffen = true;
   wlanBis = millis() + WLAN_WARTEN_MS;
@@ -225,12 +418,14 @@ void updatePruefen() {
 }
 
 void wlanTick() {
+  if (wlanAktiv) server.handleClient();
   if (!wlanOffen) return;
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("WLAN: verbunden, IP %s\n", WiFi.localIP().toString().c_str());
-    wlanErgebnis = "WLAN verbunden (" + WiFi.localIP().toString() + ")";
+    wlanErgebnis = "WLAN verbunden, Seite: http://" + WiFi.localIP().toString() + " oder http://pfeil.local";
     updatePruefen();
-    wlanAus();
+    wlanOffen = false;
+    webStart();                     // WLAN bleibt an, damit die Einstellseite erreichbar ist
   } else if ((int32_t)(millis() - wlanBis) > 0) {
     wl_status_t st = WiFi.status();
     wlanErgebnis = st == WL_NO_SSID_AVAIL ? "WLAN '" + wlanName + "' nicht gefunden (nur 2,4 GHz möglich)"
@@ -240,14 +435,18 @@ void wlanTick() {
     wlanAus();
   }
 }
+
 const char* wlanStatusText() {
+  if (apModus) return wlanErgebnis.c_str();
   if (wlanName.length() == 0) return "kein WLAN eingetragen";
   if (wlanOffen) return "suche WLAN ...";
   return wlanErgebnis.c_str();
 }
 #else
+void einstellungenLaden() { standardEinstellungen(); }
 void wlanStart() {}
 void wlanTick() {}
+void apStart() {}
 const char* wlanStatusText() { return "kein WLAN (nicht ESP32)"; }
 #endif
 
@@ -265,14 +464,16 @@ void setup() {
   Serial.printf("\nPfeil startet, Firmware %s\n", FIRMWARE_VERSION);
   pinMode(PIN_FEUER, INPUT_PULLUP);
   pinMode(PIN_TURBO, INPUT_PULLUP);
+  einstellungenLaden();
   strip.begin();
-  strip.setBrightness(HELLIGKEIT);
+  strip.setBrightness(E.hell);
   strip.clear(); strip.show();
   delay(50);
   if (digitalRead(PIN_FEUER) == LOW) countMode();
   bootTime = millis();
   for (int i = 0; i < NUM; i++) heat[i % 64] = random(60, 160);
-  wlanStart();   // läuft im Hintergrund, die Startsequenz beginnt sofort
+  if (digitalRead(PIN_TURBO) == LOW) apStart();   // TURBO beim Einstecken: eigenes WLAN für die Einstellseite
+  else wlanStart();                               // sonst Heim-WLAN im Hintergrund, die Startsequenz beginnt sofort
 }
 
 void loop() {
@@ -301,17 +502,17 @@ void loop() {
   }
 
   for (int i = 0; i < NUM; i++) {
-    char z = LED_MAP[i];
+    char z = E.map[i];
     uint32_t c = 0;
     switch (z) {
-      case 'K': {                                   // Kanzel: kühles Blau, leichtes Schimmern
-        float s = 0.85 + 0.15 * sin(now / 900.0 + i);
-        c = rgb(20 * s * lightUp, 120 * s * lightUp, 255 * s * lightUp);
+      case 'K': {                                   // Kanzel: leichtes Schimmern
+        float s = (0.85 + 0.15 * sin(now / 900.0 + i)) * lightUp;
+        c = dim(E.kanzel, s);
         break;
       }
-      case 'I': {                                   // Innenlicht: warmes Glühen, langsames Atmen
-        float s = 0.75 + 0.25 * sin(now / 1600.0 + i * 0.7);
-        c = rgb(255 * s * lightUp, 120 * s * lightUp, 30 * s * lightUp);
+      case 'I': {                                   // Innenlicht: langsames Atmen
+        float s = (0.75 + 0.25 * sin(now / 1600.0 + i * 0.7)) * lightUp;
+        c = dim(E.innen, s);
         break;
       }
       case 'H': c = rgb(230 * lightUp, 230 * lightUp, 210 * lightUp); break;   // Scheinwerfer
@@ -322,8 +523,7 @@ void loop() {
         if (random(0, 30) == 0) h = qadd(h + 80);    // Funke
         float k = ignite * (0.8 + 0.4 * turboMix);
         if (ignite < 1 && random(0, 4) == 0) k *= 0.2; // stotternde Zündung
-        uint32_t fc = fireColor(h, turboMix);
-        c = rgb(((fc >> 16) & 255) * k, ((fc >> 8) & 255) * k, (fc & 255) * k);
+        c = dim(fireColor(h, turboMix), k);
         break;
       }
       default: c = 0;
@@ -331,13 +531,14 @@ void loop() {
     strip.setPixelColor(i, c);
   }
 
-  // Kanonen: leises Rot im Leerlauf, beim Schuss läuft ein Lichtpuls zur Mündung und blitzt
-  static int L[16], R[16];
-  static int nl = zone('L', L), nr = zone('R', R);
+  // Kanonen: leises Glimmen im Leerlauf, beim Schuss läuft ein Lichtpuls zur Mündung und blitzt
+  static int L[16], R_[16];
+  static int nl = 0, nr = 0;
+  if (zonenNeu) { nl = zone('L', L); nr = zone('R', R_); zonenNeu = false; }
   for (int side = 0; side < 2; side++) {
-    int *ids = side == 0 ? L : R;
+    int *ids = side == 0 ? L : R_;
     int n = side == 0 ? nl : nr;
-    for (int k = 0; k < n; k++) strip.setPixelColor(ids[k], rgb(25 * lightUp, 0, 0));
+    for (int k = 0; k < n; k++) strip.setPixelColor(ids[k], dim(E.laser, 0.1f * lightUp));
     if (shotActive && (side == 0) == shotLeft) {
       uint32_t dt = now - shotStart;
       // Hin- und Rückweg liegen beide im Rohr: alle LEDs der Kanone nach Position im Rohr gleich behandeln
@@ -346,10 +547,10 @@ void loop() {
         int maxPos = (n + 1) / 2 - 1;
         int tHit = pos * 45;                              // Puls läuft in 45 ms je Stufe nach vorn
         int d = (int)dt - tHit;
-        uint32_t c = rgb(25, 0, 0);
-        if (d >= 0 && d < 70) c = rgb(255, 30, 20);
-        if (pos == maxPos && d >= 40 && d < 110) c = rgb(255, 220, 200);   // Mündungsblitz
-        if (pos == maxPos && d >= 110 && d < 300) { int f = 255 - (d - 110); c = rgb(f, f / 6, 0); }
+        uint32_t c = dim(E.laser, 0.1f);
+        if (d >= 0 && d < 70) c = E.laser;
+        if (pos == maxPos && d >= 40 && d < 110) c = mix(E.laser, 0xFFFFFF, 0.8f);   // Mündungsblitz
+        if (pos == maxPos && d >= 110 && d < 300) c = dim(E.laser, (300 - d) / 190.0f);
         strip.setPixelColor(ids[k], c);
       }
       if (dt > 320) shotActive = false;
@@ -357,10 +558,16 @@ void loop() {
   }
   // Scheinwerfer blitzen beim Schuss kurz mit
   if (shotActive && now - shotStart < 60) {
-    for (int i = 0; i < NUM; i++) if (LED_MAP[i] == 'H') strip.setPixelColor(i, rgb(255, 255, 255));
+    for (int i = 0; i < NUM; i++) if (E.map[i] == 'H') strip.setPixelColor(i, rgb(255, 255, 255));
+  }
+
+  // Von der Webseite angetippte LED weiß zeigen
+  if (testLed >= 0 && testLed < NUM) {
+    if (now < testBis) strip.setPixelColor(testLed, rgb(255, 255, 255));
+    else testLed = -1;
   }
 
   limitPower();
   strip.show();
-  delay(16);   // ca. 60 Bilder pro Sekunde
+  delay(16);
 }

@@ -116,9 +116,16 @@ Der Boden sitzt **innerhalb** der Griffwände und schließt unten bündig ab. Vo
 
 Oben im Sketch stehen `WLAN_NAME` und `WLAN_PASS`. Trägst du dort dein Heim-WLAN ein, schaut der ESP bei jedem Einschalten für höchstens 8 Sekunden nach, ob es auf timjanke.me eine neuere Firmware gibt (Ordner `firmware/` in diesem Repo). Gibt es eine, lädt er sie (alle LEDs pulsieren blau) und startet neu. Ohne WLAN in Reichweite läuft das Licht einfach sofort los. Das erste Aufspielen geht nur per USB. Die Datei mit dem Passwort nicht weitergeben.
 
+### Einstellseite am Handy (ab Firmware 3.0)
+
+Der ESP liefert eine kleine Webseite aus. Dort tippst du jede LED an (sie leuchtet dann weiß im Schiff) und sagst, was sie ist (Kanzel, Innen, Scheinwerfer, Kanone L/R, Flamme L/R, aus). Außerdem stellst du die Farben von Laser, Turbo, Flammen, Kanzel und Innenlicht sowie die Helligkeit ein und kannst Feuer und Turbo testen. „Speichern“ legt alles dauerhaft im ESP ab, es überlebt auch Updates.
+
+- **Zu Hause:** ESP ist im Heim-WLAN, Seite unter `http://pfeil.local` (oder die IP aus dem Seriellen Monitor, z. B. `http://192.168.1.49`).
+- **Unterwegs:** TURBO beim Einstecken gedrückt halten. Der ESP macht dann ein eigenes WLAN **Pfeil-Laterne** auf (Passwort `pfeil1234`). Handy damit verbinden und `http://192.168.4.1` öffnen. In diesem Modus holt er keine Updates.
+
 ### LEDs zuordnen (Zählmodus)
 
-Wie die Kette im Schiff liegt, hängt davon ab, wie du sie verlegst. Im Code steht deshalb oben eine Karte `LED_MAP`: ein Buchstabe pro LED, in Kettenreihenfolge.
+Die Zuordnung geht am einfachsten über die Einstellseite (oben). Der Zählmodus ist der Weg ohne Handy: Im Code steht eine Karte `LED_MAP_DEFAULT` (ein Buchstabe pro LED, in Kettenreihenfolge), die nur beim allerersten Start gilt.
 
 | Buchstabe | Bedeutung |
 | --- | --- |
