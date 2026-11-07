@@ -44,9 +44,10 @@
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
-const char* FIRMWARE_VERSION = "3.0";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "3.1";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
-const uint32_t WLAN_WARTEN_MS = 8000;   // so lange wird aufs WLAN gewartet, dann wird es abgeschaltet
+const uint32_t WLAN_WARTEN_MS = 20000;  // so lange wird je Versuch aufs WLAN gewartet
+const uint32_t WLAN_PAUSE_MS  = 120000; // danach Pause, dann neuer Versuch im Hintergrund
 const char* AP_NAME = "Pfeil-Laterne";  // eigenes WLAN unterwegs (TURBO beim Einstecken halten)
 const char* AP_PASS = "pfeil1234";
 const char* HOSTNAME = "pfeil";         // -> http://pfeil.local
@@ -403,21 +404,29 @@ void apStart() {
   webStart();
 }
 
+uint32_t wlanNaechster = 0;   // Zeitpunkt des nächsten Verbindungsversuchs
+int wlanVersuche = 0;
+
+void wlanVerbinden() {
+  WiFi.setHostname(HOSTNAME);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(wlanName.c_str(), wlanPass.c_str());
+  wlanOffen = true;
+  wlanVersuche++;
+  wlanBis = millis() + WLAN_WARTEN_MS;
+  Serial.printf("WLAN: verbinde mit %s (Versuch %d) ...\n", wlanName.c_str(), wlanVersuche);
+}
+
 void wlanStart() {
   zugangLaden();
   if (wlanName.length() == 0) return;
-  WiFi.mode(WIFI_STA);
-  WiFi.setHostname(HOSTNAME);
-  WiFi.begin(wlanName.c_str(), wlanPass.c_str());
-  wlanOffen = true;
-  wlanBis = millis() + WLAN_WARTEN_MS;
-  Serial.printf("WLAN: verbinde mit %s ...\n", wlanName.c_str());
+  wlanVerbinden();
 }
 
-void wlanAus() {
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
+void wlanPause() {               // Versuch beenden, später nochmal
+  WiFi.disconnect();
   wlanOffen = false;
+  wlanNaechster = millis() + WLAN_PAUSE_MS;
 }
 
 void updateAnzeige(int ms) {   // alle LEDs pulsieren blau, solange geladen wird
@@ -463,7 +472,10 @@ void updatePruefen() {
 
 void wlanTick() {
   if (wlanAktiv) server.handleClient();
-  if (!wlanOffen) return;
+  if (!wlanOffen) {
+    if (!wlanAktiv && !apModus && wlanName.length() && (int32_t)(millis() - wlanNaechster) > 0) wlanVerbinden();
+    return;
+  }
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("WLAN: verbunden, IP %s\n", WiFi.localIP().toString().c_str());
     wlanErgebnis = "WLAN verbunden, Seite: http://" + WiFi.localIP().toString() + " oder http://pfeil.local";
@@ -475,8 +487,9 @@ void wlanTick() {
     wlanErgebnis = st == WL_NO_SSID_AVAIL ? "WLAN '" + wlanName + "' nicht gefunden (nur 2,4 GHz möglich)"
                  : st == WL_CONNECT_FAILED ? "WLAN-Verbindung abgelehnt (Passwort?)"
                  : "WLAN nicht verbunden (Status " + String((int)st) + ")";
-    Serial.println("WLAN: " + wlanErgebnis + ", weiter ohne");
-    wlanAus();
+    wlanErgebnis += ", neuer Versuch in " + String(WLAN_PAUSE_MS / 1000) + " s";
+    Serial.println("WLAN: " + wlanErgebnis);
+    wlanPause();
   }
 }
 
