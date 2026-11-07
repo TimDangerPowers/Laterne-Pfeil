@@ -1,0 +1,183 @@
+{
+ "rumpf-unten": {
+  "gewicht_g": 52,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   209,
+   209,
+   58
+  ]
+ },
+ "rumpf-oben": {
+  "gewicht_g": 34,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   170,
+   92,
+   41
+  ]
+ },
+ "kanzel": {
+  "gewicht_g": 3,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   78,
+   46,
+   25
+  ]
+ },
+ "leitwerk": {
+  "gewicht_g": 5,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   56,
+   54,
+   3
+  ]
+ },
+ "fluegel-links": {
+  "gewicht_g": 32,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   110,
+   113,
+   15
+  ]
+ },
+ "fluegel-rechts": {
+  "gewicht_g": 32,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   110,
+   113,
+   15
+  ]
+ },
+ "triebwerk-links": {
+  "gewicht_g": 21,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   36,
+   36,
+   118
+  ]
+ },
+ "triebwerk-rechts": {
+  "gewicht_g": 21,
+  "valid": true,
+  "solids": 1
+ },
+ "flamme-links": {
+  "gewicht_g": 13,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   40,
+   43,
+   84
+  ]
+ },
+ "flamme-rechts": {
+  "gewicht_g": 13,
+  "valid": true,
+  "solids": 1
+ },
+ "kanone-links": {
+  "gewicht_g": 7,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   14,
+   16,
+   76
+  ]
+ },
+ "kanone-rechts": {
+  "gewicht_g": 7,
+  "valid": true,
+  "solids": 1
+ },
+ "griff": {
+  "gewicht_g": 43,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   101,
+   39,
+   37
+  ]
+ },
+ "griff-boden": {
+  "gewicht_g": 18,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   96,
+   34,
+   13
+  ]
+ },
+ "griff-bock": {
+  "gewicht_g": 3,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   18,
+   9,
+   15
+  ]
+ },
+ "kanaldeckel-links": {
+  "gewicht_g": 1,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   63,
+   95,
+   1
+  ]
+ },
+ "kanaldeckel-rechts": {
+  "gewicht_g": 1,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   63,
+   95,
+   1
+  ]
+ },
+ "fussdeckel-links": {
+  "gewicht_g": 0,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   26,
+   10,
+   1
+  ]
+ },
+ "fussdeckel-rechts": {
+  "gewicht_g": 0,
+  "valid": true,
+  "solids": 1,
+  "druckgroesse_mm": [
+   26,
+   10,
+   1
+  ]
+ },
+ "_summe_g": 245,
+ "_schwerpunkt_mm": [
+  54.7,
+  -0.2,
+  -2.7
+ ]
+}

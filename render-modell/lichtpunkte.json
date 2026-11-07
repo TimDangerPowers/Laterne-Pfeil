@@ -1,0 +1,11 @@
+{
+ "einheit": "mm, X = vorn (Nase), Y = links, Z = oben, Ursprung = Heckwand Rumpfmitte",
+ "flamme_links":  {"kragen_x": -37, "spitze_x": -107, "y": 65.5, "z": 5.5, "max_radius": 20},
+ "flamme_rechts": {"kragen_x": -37, "spitze_x": -107, "y": -65.5, "z": 5.5, "max_radius": 20},
+ "kanone_links":  {"rohr_von_x": 72, "muendung_x": 140, "y": 145, "z": -7.6, "led_anzahl": 4},
+ "kanone_rechts": {"rohr_von_x": 72, "muendung_x": 140, "y": -145, "z": -7.6, "led_anzahl": 4},
+ "scheinwerfer":  [{"x": 245, "y": 3.4, "z": -24}, {"x": 245, "y": -3.4, "z": -24}],
+ "kanzel_mitte":  {"x": 130, "y": 0, "z": 40},
+ "innenlicht":    {"x": 90, "y": 0, "z": 0, "hinweis": "warmes Licht hinter papier.stl (Fenster, TONI, Heckgitter)"},
+ "griff": "griff.stl und griff-boden.stl liegen in eigenen Koordinaten um den Ursprung (101 x 39 x 37 mm), nicht am Schiff"
+}

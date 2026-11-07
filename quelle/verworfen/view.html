@@ -1,0 +1,65 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent;overflow:hidden}</style>
+<script type="importmap">{"imports":{"three":"./three/build/three.module.js","three/addons/":"./three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+const q = new URLSearchParams(location.search);
+const mode = q.get('mode') || 'day';          // day | night
+const explode = parseFloat(q.get('explode') || '0');
+const az = parseFloat(q.get('az') || '-35'), el = parseFloat(q.get('el') || '12');
+const zoom = parseFloat(q.get('zoom') || '1');
+const hidden = (q.get('hide') || '').split(',');
+const W = innerWidth, H = innerHeight;
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setSize(W, H); r.setPixelRatio(1); r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(r.domElement);
+const scene = new THREE.Scene();
+if (mode === 'night') scene.background = new THREE.Color(0x0a0d18);
+const cam = new THREE.PerspectiveCamera(24, W / H, 1, 5000);
+const night = mode === 'night';
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445066, night ? 0.08 : 1.4));
+const d1 = new THREE.DirectionalLight(0xffffff, night ? 0.15 : 2.2); d1.position.set(-300, -500, 600); scene.add(d1);
+const d2 = new THREE.DirectionalLight(0x9fb4ff, night ? 0.1 : 0.8); d2.position.set(400, 300, 200); scene.add(d2);
+const scheme = q.get('scheme') || 'a';
+const FRAME = scheme === 'a' ? 0x2b2f36 : 0xeeeeea, ACC = 0xc8202a;
+const C = {
+  spitze: { color: ACC, rough: 0.45 },
+  heck: { color: ACC, rough: 0.45 },
+  rumpf: { color: FRAME, rough: 0.55 },
+  akkuhalter: { color: 0x333740, rough: 0.6 },
+  flamme: { color: 0xff8a1f, rough: 0.35, glow: 0xff7a10, gi: 2.2, opacity: 0.92 },
+  papier: { color: 0xffb347, rough: 0.9, glow: 0xffa630, gi: 1.5, dayGlow: 0.15 },
+  'papier-spitze': { color: 0x4fc3ff, rough: 0.9, glow: 0x3fb4ff, gi: 1.6, dayGlow: 0.15 },
+};
+const off = { papier: 0, 'papier-spitze': 120, spitze: 120, akkuhalter: 75, rumpf: 0, heck: -40, flamme: -110 };
+const loader = new STLLoader();
+const group = new THREE.Group(); scene.add(group);
+let n = 0; const names = Object.keys(C).filter(k => !hidden.includes(k) && (night || !C[k].nightOnly));
+for (const k of names) {
+  loader.load(`../../_render/${k}.stl`, (g) => {
+    g.computeVertexNormals();
+    const c = C[k];
+    const m = new THREE.MeshStandardMaterial({ color: c.color, roughness: c.rough, metalness: 0.05,
+      transparent: !!(c.opacity || (night && c.nopacity)), opacity: (night && c.nopacity) || c.opacity || 1, side: THREE.DoubleSide });
+    if (night && c.glow) { m.emissive = new THREE.Color(c.glow); m.emissiveIntensity = c.gi; }
+    if (!night && c.dayGlow) { m.emissive = new THREE.Color(c.glow); m.emissiveIntensity = c.dayGlow; }
+    if (night && !c.glow) { m.color.multiplyScalar(0.3); }
+    const mesh = new THREE.Mesh(g, m); mesh.position.z = explode * off[k];
+    group.add(mesh);
+    if (++n === names.length) done();
+  });
+}
+function done() {
+  if (night) {
+    const pl = new THREE.PointLight(0xffc080, 60000, 900, 2); pl.position.set(0, 0, 120); group.add(pl);
+    const pf = new THREE.PointLight(0xff7a10, 40000, 700, 2); pf.position.set(0, 0, -50 + explode * off.flamme); group.add(pf);
+  }
+  const box = new THREE.Box3().setFromObject(group); const c = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3()); const dist = Math.max(size.z, size.x * H / W) / 2 / Math.tan(THREE.MathUtils.degToRad(12)) * 1.12 / zoom + size.x / 2;
+  const a = THREE.MathUtils.degToRad(az), e = THREE.MathUtils.degToRad(el);
+  cam.up.set(0, 0, 1);
+  cam.position.set(c.x + dist * Math.cos(e) * Math.sin(a), c.y - dist * Math.cos(e) * Math.cos(a), c.z + dist * Math.sin(e));
+  cam.lookAt(c);
+  r.render(scene, cam); window.READY = true;
+}
+</script></body></html>
