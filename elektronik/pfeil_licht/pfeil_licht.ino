@@ -44,7 +44,7 @@
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
-const char* FIRMWARE_VERSION = "3.2";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "3.3";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 20000;  // so lange wird je Versuch aufs WLAN gewartet
 const uint32_t WLAN_PAUSE_MS  = 120000; // danach Pause, dann neuer Versuch im Hintergrund
@@ -150,7 +150,9 @@ void zustandSetzen(Zustand z) { zustand = z; zustandSeit = millis(); }
 
 // berechnet die Pegel der drei Gruppen aus dem Zustand
 void sequenzTick(uint32_t now) {
-  uint32_t t = now - zustandSeit;
+  // zustandSeit kann im selben Durchlauf gesetzt worden sein und 1 ms jünger als now sein: nicht unter 0 laufen lassen
+  int32_t dt = (int32_t)(now - zustandSeit);
+  uint32_t t = dt < 0 ? 0 : (uint32_t)dt;
   switch (zustand) {
     case FAEHRT_HOCH:                                   // Kanzel 0-1,5 s, Front 1-2,5 s, Triebwerke 2,5-6 s
       lvlKanzel = rampe(t, 0, 1500); lvlFront = rampe(t, 1000, 2500); lvlTriebwerk = rampe(t, 2500, 6000);
