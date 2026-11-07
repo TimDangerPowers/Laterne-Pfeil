@@ -24,12 +24,18 @@
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
+#include <Preferences.h>
 #endif
 
 // ------------------------------------------------------------------ WLAN und Update
-const char* WLAN_NAME = "";          // Name deines WLANs. Leer lassen = kein WLAN, keine Updates.
-const char* WLAN_PASS = "";          // Passwort. (Diese Datei dann nicht weitergeben.)
+// Einmal eintragen und per USB hochladen: der ESP merkt sich die Zugangsdaten dauerhaft in seinem Speicher.
+// Danach kann hier wieder "" stehen; die fertige Firmware im Repo (firmware/pfeil_licht.bin) enthält deshalb keine Passwörter.
+const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
+const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
+#ifdef ESP32
+String wlanName, wlanPass, githubToken;   // tatsächlich benutzte Werte (aus den Zeilen oben oder aus dem Speicher)
+#endif
 const int   FIRMWARE_VERSION = 2;    // wird bei jeder neuen Version hochgezählt
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 8000;   // so lange wird aufs WLAN gewartet, dann wird es abgeschaltet
@@ -145,13 +151,29 @@ void countMode() {
 bool wlanOffen = false;
 uint32_t wlanBis = 0;
 
+void zugangLaden() {
+  Preferences pref;
+  pref.begin("pfeil", false);
+  if (WLAN_NAME[0]) {                       // neu eingetragen: merken
+    pref.putString("ssid", WLAN_NAME);
+    pref.putString("pass", WLAN_PASS);
+    Serial.println("WLAN: Zugangsdaten gespeichert");
+  }
+  if (GITHUB_TOKEN[0]) pref.putString("token", GITHUB_TOKEN);
+  wlanName = pref.getString("ssid", "");
+  wlanPass = pref.getString("pass", "");
+  githubToken = pref.getString("token", "");
+  pref.end();
+}
+
 void wlanStart() {
-  if (WLAN_NAME[0] == 0) return;
+  zugangLaden();
+  if (wlanName.length() == 0) return;
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WLAN_NAME, WLAN_PASS);
+  WiFi.begin(wlanName.c_str(), wlanPass.c_str());
   wlanOffen = true;
   wlanBis = millis() + WLAN_WARTEN_MS;
-  Serial.printf("WLAN: verbinde mit %s ...\n", WLAN_NAME);
+  Serial.printf("WLAN: verbinde mit %s ...\n", wlanName.c_str());
 }
 
 void wlanAus() {
@@ -172,7 +194,7 @@ void updatePruefen() {
   HTTPClient http;
   http.setTimeout(4000);
   if (!http.begin(client, String(UPDATE_URL) + "version.txt")) return;
-  if (GITHUB_TOKEN[0]) http.addHeader("Authorization", String("token ") + GITHUB_TOKEN);
+  if (githubToken.length()) http.addHeader("Authorization", "token " + githubToken);
   int code = http.GET();
   int neu = code == 200 ? http.getString().toInt() : -1;
   http.end();
@@ -181,7 +203,7 @@ void updatePruefen() {
 
   Serial.println("Update: lade neue Firmware ...");
   httpUpdate.rebootOnUpdate(true);
-  if (GITHUB_TOKEN[0]) httpUpdate.setAuthorization(String("token ") + GITHUB_TOKEN);
+  if (githubToken.length()) httpUpdate.setAuthorization("token " + githubToken);
   httpUpdate.onProgress([](int done, int total) { updateAnzeige(millis()); });
   t_httpUpdate_return r = httpUpdate.update(client, String(UPDATE_URL) + "pfeil_licht.bin");
   if (r == HTTP_UPDATE_FAILED) Serial.printf("Update fehlgeschlagen: %s\n", httpUpdate.getLastErrorString().c_str());
