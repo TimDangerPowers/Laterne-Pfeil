@@ -116,6 +116,10 @@ Der Boden sitzt **innerhalb** der Griffwände und schließt unten bündig ab. Vo
 
 Oben im Sketch stehen `WLAN_NAME` und `WLAN_PASS`. Trägst du dort dein Heim-WLAN ein, schaut der ESP bei jedem Einschalten für höchstens 8 Sekunden nach, ob es auf timjanke.me eine neuere Firmware gibt (Ordner `firmware/` in diesem Repo). Gibt es eine, lädt er sie (alle LEDs pulsieren blau) und startet neu. Ohne WLAN in Reichweite läuft das Licht einfach sofort los. Das erste Aufspielen geht nur per USB. Die Datei mit dem Passwort nicht weitergeben.
 
+### An und Aus
+
+TURBO **1,5 Sekunden halten**: Das Schiff fährt herunter, erst gehen die Triebwerke aus, dann Laser, Scheinwerfer und Innenlicht, zuletzt die Kanzel. Im dunklen Zustand irgendeinen Knopf drücken: Es fährt in umgekehrter Reihenfolge wieder hoch, die Triebwerke zünden langsam. Beim Einstecken läuft dieselbe Startsequenz. Kurz auf TURBO tippen bleibt der Turbo.
+
 ### Einstellseite am Handy (ab Firmware 3.0)
 
 Der ESP liefert eine kleine Webseite aus. Dort tippst du jede LED an (sie leuchtet dann weiß im Schiff) und sagst, was sie ist (Kanzel, Innen, Scheinwerfer, Kanone L/R, Flamme L/R, aus). Außerdem stellst du die Farben von Laser, Turbo, Flammen, Kanzel und Innenlicht sowie die Helligkeit ein und kannst Feuer und Turbo testen. „Speichern“ legt alles dauerhaft im ESP ab, es überlebt auch Updates.

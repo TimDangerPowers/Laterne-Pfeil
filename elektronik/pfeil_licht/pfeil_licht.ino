@@ -3,8 +3,10 @@
   ESP32-C3-Zero (oder SuperMini) im Griff, eine adressierbare WS2812B-Lichterkette (50 LEDs, 10 cm Abstand) im Raumschiff.
 
   Knöpfe:  FEUER  -> Laserkanonen schießen abwechselnd links/rechts (gedrückt halten = Dauerfeuer)
-           TURBO  -> Triebwerke lodern 4 Sekunden hell auf (Turbofarbe)
-  Beim Einschalten läuft eine kurze Startsequenz (Licht an, Triebwerke zünden).
+           TURBO  -> kurz: Triebwerke lodern 4 Sekunden hell auf (Turbofarbe)
+                     1,5 s halten: Schiff fährt herunter (erst Triebwerke, dann Laser/Scheinwerfer, zuletzt Kanzel)
+           im Aus-Zustand irgendein Knopf -> Schiff fährt hoch (Kanzel, dann Licht vorn, dann zünden die Triebwerke langsam)
+  Beim Einschalten läuft dieselbe Startsequenz.
 
   EINSTELLSEITE (Handy oder PC): Der ESP liefert eine Webseite aus, auf der du jede LED zuordnest
     (sie leuchtet dabei zur Kontrolle) und die Farben von Laser, Turbo und Flammen sowie die Helligkeit einstellst.
@@ -110,17 +112,52 @@ uint32_t bootTime;
 int testLed = -1;                     // von der Webseite: diese LED weiß zeigen
 uint32_t testBis = 0;
 bool zonenNeu = true;                 // Kanonen-Zonen neu einsammeln
+bool turboWeb = false;                // Turbo von der Webseite ausgelöst
 
-struct Btn { int pin; bool down; bool pressed; uint32_t t; };
-Btn feuer{PIN_FEUER, false, false, 0}, turbo{PIN_TURBO, false, false, 0};
+struct Btn { int pin; bool down; bool pressed; bool released; uint32_t t; uint32_t heldMs; };
+Btn feuer{PIN_FEUER, false, false, false, 0, 0}, turbo{PIN_TURBO, false, false, false, 0, 0};
 
 void readBtn(Btn &b) {
   bool d = digitalRead(b.pin) == LOW;
-  b.pressed = false;
+  b.pressed = false; b.released = false;
   if (d != b.down && millis() - b.t > 25) {   // entprellen
+    if (d) b.pressed = true; else { b.released = true; b.heldMs = millis() - b.t; }
     b.t = millis();
-    if (d) b.pressed = true;
     b.down = d;
+  }
+}
+
+// ------------------------------------------------------------------ An und Aus (Sequenzen)
+// TURBO lange halten (1,5 s): Schiff fährt herunter – erst Triebwerke, dann Laser und Scheinwerfer, zuletzt Kanzel.
+// Im ausgeschalteten Zustand irgendeinen Knopf drücken: hochfahren in umgekehrter Reihenfolge, Triebwerke zünden langsam.
+enum Zustand { AN, FAEHRT_RUNTER, AUS, FAEHRT_HOCH };
+Zustand zustand = FAEHRT_HOCH;
+uint32_t zustandSeit = 0;
+const uint32_t HALTEN_AUS_MS = 1500;
+float lvlKanzel = 0, lvlFront = 0, lvlTriebwerk = 0;   // 0..1 je Gruppe (Front = Innen, Scheinwerfer, Kanonen)
+
+static inline float rampe(uint32_t t, uint32_t von, uint32_t bis) {   // 0 vor „von“, 1 nach „bis“
+  if (t <= von) return 0;
+  if (t >= bis) return 1;
+  return (float)(t - von) / (bis - von);
+}
+
+void zustandSetzen(Zustand z) { zustand = z; zustandSeit = millis(); }
+
+// berechnet die Pegel der drei Gruppen aus dem Zustand
+void sequenzTick(uint32_t now) {
+  uint32_t t = now - zustandSeit;
+  switch (zustand) {
+    case FAEHRT_HOCH:                                   // Kanzel 0-1,5 s, Front 1-2,5 s, Triebwerke 2,5-6 s
+      lvlKanzel = rampe(t, 0, 1500); lvlFront = rampe(t, 1000, 2500); lvlTriebwerk = rampe(t, 2500, 6000);
+      if (t >= 6000) zustandSetzen(AN);
+      break;
+    case AN: lvlKanzel = lvlFront = lvlTriebwerk = 1; break;
+    case FAEHRT_RUNTER:                                 // Triebwerke 0-2,5 s, Front 2,5-4 s, Kanzel 4-5,5 s
+      lvlTriebwerk = 1 - rampe(t, 0, 2500); lvlFront = 1 - rampe(t, 2500, 4000); lvlKanzel = 1 - rampe(t, 4000, 5500);
+      if (t >= 5500) zustandSetzen(AUS);
+      break;
+    case AUS: lvlKanzel = lvlFront = lvlTriebwerk = 0; break;
   }
 }
 
@@ -278,7 +315,7 @@ button.sek{background:#2a3040}
 <div class="zeile"><span>Helligkeit</span><input type="range" id="hell" min="20" max="255"></div>
 </section>
 <section><h2>Testen</h2>
-<div class="btns"><button class="sek" onclick="api('fire')">Feuer</button><button class="sek" onclick="api('turbo')">Turbo</button></div>
+<div class="btns"><button class="sek" onclick="api('fire')">Feuer</button><button class="sek" onclick="api('turbo')">Turbo</button><button class="sek" onclick="api('power')">An / Aus</button></div>
 </section>
 <section>
 <div class="btns"><button onclick="speichern()">Speichern</button><button class="sek" onclick="laden()">Zurücksetzen</button></div>
@@ -342,7 +379,11 @@ void webStart() {
     server.send(200, "application/json", "{\"ok\":1}");
   });
   server.on("/api/fire",  HTTP_ANY, []() { feuer.pressed = true; server.send(200, "application/json", "{\"ok\":1}"); });
-  server.on("/api/turbo", HTTP_ANY, []() { turbo.pressed = true; server.send(200, "application/json", "{\"ok\":1}"); });
+  server.on("/api/turbo", HTTP_ANY, []() { turboWeb = true; server.send(200, "application/json", "{\"ok\":1}"); });
+  server.on("/api/power", HTTP_ANY, []() {    // An/Aus umschalten
+    if (zustand == AUS || zustand == FAEHRT_RUNTER) zustandSetzen(FAEHRT_HOCH); else zustandSetzen(FAEHRT_RUNTER);
+    server.send(200, "application/json", "{\"ok\":1}");
+  });
   server.on("/api/save",  HTTP_ANY, []() { einstellungenSpeichern(); server.send(200, "application/json", "{\"ok\":1}"); });
   server.onNotFound([]() { server.sendHeader("Location", "/"); server.send(302, "text/plain", ""); });
   server.begin();
@@ -471,6 +512,7 @@ void setup() {
   delay(50);
   if (digitalRead(PIN_FEUER) == LOW) countMode();
   bootTime = millis();
+  zustandSetzen(FAEHRT_HOCH);
   for (int i = 0; i < NUM; i++) heat[i % 64] = random(60, 160);
   if (digitalRead(PIN_TURBO) == LOW) apStart();   // TURBO beim Einstecken: eigenes WLAN für die Einstellseite
   else wlanStart();                               // sonst Heim-WLAN im Hintergrund, die Startsequenz beginnt sofort
@@ -478,18 +520,23 @@ void setup() {
 
 void loop() {
   uint32_t now = millis();
-  uint32_t t = now - bootTime;
   readBtn(feuer); readBtn(turbo);
   wlanTick();
   statusZeile();
 
-  // ---------------- Startsequenz: 0-1,2 s Licht an, ab 1,2 s Triebwerke zünden
-  float lightUp = constrain(t / 1200.0f, 0.0f, 1.0f);
-  float ignite  = constrain((t - 1200.0f) / 1500.0f, 0.0f, 1.0f);
-  if (t < 1200) ignite = 0;
+  // ---------------- An/Aus: TURBO lange halten = herunterfahren, im Aus-Zustand ein Knopf = hochfahren
+  if (zustand == AUS && (feuer.pressed || turbo.pressed)) { zustandSetzen(FAEHRT_HOCH); feuer.pressed = turbo.pressed = false; }
+  else if ((zustand == AN || zustand == FAEHRT_HOCH) && turbo.down && now - turbo.t >= HALTEN_AUS_MS) { zustandSetzen(FAEHRT_RUNTER); turboUntil = 0; }
+  sequenzTick(now);
+  bool bereit = zustand == AN;
+  float lightUp = lvlFront;       // Innen, Scheinwerfer, Kanonen
+  float ignite  = lvlTriebwerk;   // Triebwerke
+  float kanzelUp = lvlKanzel;
 
-  // ---------------- Turbo
-  if (turbo.pressed && t > 2700) { turboStart = now; turboUntil = now + TURBO_MS; }
+  // ---------------- Turbo: kurzer Druck (Loslassen vor 1,5 s) oder Knopf auf der Webseite
+  bool turboAusloesen = (turbo.released && turbo.heldMs < HALTEN_AUS_MS) || turboWeb;
+  turboWeb = false;
+  if (turboAusloesen && bereit) { turboStart = now; turboUntil = now + TURBO_MS; }
   float turboMix = 0;
   if (now < turboUntil) {
     uint32_t in = now - turboStart, left = turboUntil - now;
@@ -497,7 +544,7 @@ void loop() {
   }
 
   // ---------------- Feuer: abwechselnd links/rechts, Dauerfeuer beim Halten
-  if (t > 2700 && (feuer.pressed || (feuer.down && now >= nextShot))) {
+  if (bereit && (feuer.pressed || (feuer.down && now >= nextShot))) {
     shotActive = true; shotStart = now; nextShot = now + SCHUSS_MS; shotLeft = !shotLeft;
   }
 
@@ -506,7 +553,7 @@ void loop() {
     uint32_t c = 0;
     switch (z) {
       case 'K': {                                   // Kanzel: leichtes Schimmern
-        float s = (0.85 + 0.15 * sin(now / 900.0 + i)) * lightUp;
+        float s = (0.85 + 0.15 * sin(now / 900.0 + i)) * kanzelUp;
         c = dim(E.kanzel, s);
         break;
       }
@@ -522,7 +569,7 @@ void loop() {
         h = (h * 3 + target) / 4;                   // weiches Flackern
         if (random(0, 30) == 0) h = qadd(h + 80);    // Funke
         float k = ignite * (0.8 + 0.4 * turboMix);
-        if (ignite < 1 && random(0, 4) == 0) k *= 0.2; // stotternde Zündung
+        if (zustand == FAEHRT_HOCH && ignite < 1 && random(0, 4) == 0) k *= 0.2; // stotternde Zündung
         c = dim(fireColor(h, turboMix), k);
         break;
       }
