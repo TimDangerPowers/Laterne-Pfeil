@@ -123,7 +123,7 @@ TURBO **1,5 Sekunden halten**: Das Schiff fährt herunter, erst gehen die Triebw
 
 ### Einstellseite am Handy (ab Firmware 3.0)
 
-Der ESP liefert eine kleine Webseite aus. Dort tippst du jede LED an (sie leuchtet dann weiß im Schiff) und sagst, was sie ist (Kanzel, Innen, Scheinwerfer, Kanone L/R, Flamme L/R, aus). Außerdem stellst du die Farben ein (Kanonen-Glimmen, Schuss, Turbo, Flammen, Kanzel, Innenlicht), die Gesamthelligkeit und ab Firmware 3.6 die Helligkeit je Bereich (Kanzel, Innenlicht, Scheinwerfer, Kanonen, Flammen, je 0 bis 100 %) und kannst Feuer und Turbo testen. „Speichern“ legt alles dauerhaft im ESP ab, es überlebt auch Updates.
+Der ESP liefert eine kleine Webseite aus. Dort tippst du jede LED an (sie leuchtet dann weiß im Schiff) und sagst, was sie ist (Kanzel, Innen, Scheinwerfer, Kanone L/R, Flamme L/R, aus). Außerdem stellst du die Farben ein: Laser normal und Schuss, Triebwerke normal (Flamme Grund und Spitze) und Turbo, Scheinwerfer, Kanzel und Innenlicht, die Gesamthelligkeit und ab Firmware 3.6 die Helligkeit je Bereich (Kanzel, Innenlicht, Scheinwerfer, Kanonen, Flammen, je 0 bis 100 %) und kannst Feuer und Turbo testen. „Speichern“ legt alles dauerhaft im ESP ab, es überlebt auch Updates. Zur Bestätigung erscheint auf dem Handy „✓ Gespeichert“ und das Schiff blinkt zweimal kurz grün.
 
 - **Zu Hause:** ESP ist im Heim-WLAN, Seite unter `http://pfeil.local` (oder die IP aus dem Seriellen Monitor, z. B. `http://192.168.1.49`).
 - **Unterwegs:** TURBO beim Einstecken gedrückt halten. Der ESP macht dann ein eigenes WLAN **Pfeil-Laterne** auf (Passwort `pfeil1234`). Handy damit verbinden und `http://192.168.4.1` öffnen. In diesem Modus holt er keine Updates.

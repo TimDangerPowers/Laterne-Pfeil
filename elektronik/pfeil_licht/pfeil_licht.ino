@@ -44,7 +44,7 @@
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
-const char* FIRMWARE_VERSION = "3.7";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "3.8";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 20000;  // so lange wird je Versuch aufs WLAN gewartet
 const uint32_t WLAN_PAUSE_MS  = 120000; // danach Pause, dann neuer Versuch im Hintergrund
@@ -87,6 +87,7 @@ struct Einstellungen {
   uint32_t flamme2;       // Flamme: Spitzenfarbe (heißester Teil)
   uint32_t kanzel;        // Kanzelfarbe
   uint32_t innen;         // Innenlicht
+  uint32_t schein;        // Scheinwerfer
   uint8_t  bK, bI, bH, bL, bF;   // Helligkeit je Bereich in Prozent: Kanzel, Innen, Scheinwerfer, Kanonen, Flammen
 } E;
 
@@ -100,6 +101,7 @@ void standardEinstellungen() {
   E.flamme2 = 0xFF5A00;   // Orange
   E.kanzel  = 0x1478FF;
   E.innen   = 0xFF781E;
+  E.schein  = 0xE6E6D2;   // warmes Weiß
   E.bK = E.bI = E.bH = E.bL = E.bF = 100;
 }
 
@@ -128,6 +130,7 @@ bool shotLeft = true, shotActive = false;
 uint32_t bootTime;
 int testLed = -1;                     // von der Webseite: diese LED weiß zeigen
 uint32_t testBis = 0;
+uint32_t gespeichertBis = 0;          // nach dem Speichern blinkt das Schiff kurz grün
 bool zonenNeu = true;                 // Kanonen-Zonen neu einsammeln
 bool turboWeb = false;                // Turbo von der Webseite ausgelöst
 
@@ -266,6 +269,7 @@ void einstellungenLaden() {
   E.flamme2 = p.getUInt("fl2", E.flamme2);
   E.kanzel  = p.getUInt("kanzel", E.kanzel);
   E.innen   = p.getUInt("innen", E.innen);
+  E.schein  = p.getUInt("schein", E.schein);
   E.bK = p.getUChar("bK", E.bK); E.bI = p.getUChar("bI", E.bI); E.bH = p.getUChar("bH", E.bH);
   E.bL = p.getUChar("bL", E.bL); E.bF = p.getUChar("bF", E.bF);
   p.end();
@@ -283,6 +287,7 @@ void einstellungenSpeichern() {
   p.putUInt("fl2", E.flamme2);
   p.putUInt("kanzel", E.kanzel);
   p.putUInt("innen", E.innen);
+  p.putUInt("schein", E.schein);
   p.putUChar("bK", E.bK); p.putUChar("bI", E.bI); p.putUChar("bH", E.bH);
   p.putUChar("bL", E.bL); p.putUChar("bF", E.bF);
   p.end();
@@ -326,6 +331,9 @@ button{background:#2b6cff;color:#fff;border:none;border-radius:10px;padding:12px
 button.sek{background:#2a3040}
 .btns{display:flex;gap:10px;flex-wrap:wrap}
 #msg{color:#8a90a8;font-size:14px;margin-top:8px;min-height:18px}
+h3{font-size:13px;color:#8a90a8;margin:14px 0 4px;text-transform:uppercase;letter-spacing:.06em}
+#ok{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) scale(.9);background:#1f8f4e;color:#fff;font-size:22px;font-weight:600;padding:18px 28px;border-radius:14px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+#ok.zeigen{opacity:1;transform:translate(-50%,-50%) scale(1)}
 </style></head><body>
 <header>Pfeil – Einstellungen <small id="ver"></small></header>
 <section><h2>LEDs zuordnen</h2>
@@ -334,11 +342,15 @@ button.sek{background:#2a3040}
 <div class="zonen" id="zonen"></div>
 </section>
 <section><h2>Farben</h2>
-<div class="zeile"><span>Kanonen glimmen</span><input type="color" id="laser"></div>
+<h3>Laser</h3>
+<div class="zeile"><span>Normal (Glimmen)</span><input type="color" id="laser"></div>
 <div class="zeile"><span>Schuss</span><input type="color" id="schuss"></div>
+<h3>Triebwerke</h3>
+<div class="zeile"><span>Normal: Flamme Grund</span><input type="color" id="fl1"></div>
+<div class="zeile"><span>Normal: Flamme Spitze</span><input type="color" id="fl2"></div>
 <div class="zeile"><span>Turbo</span><input type="color" id="turbo"></div>
-<div class="zeile"><span>Flamme Grundfarbe</span><input type="color" id="fl1"></div>
-<div class="zeile"><span>Flamme Spitze</span><input type="color" id="fl2"></div>
+<h3>Licht</h3>
+<div class="zeile"><span>Scheinwerfer</span><input type="color" id="schein"></div>
 <div class="zeile"><span>Kanzel</span><input type="color" id="kanzel"></div>
 <div class="zeile"><span>Innenlicht</span><input type="color" id="innen"></div>
 </section>
@@ -372,16 +384,16 @@ function zeichnen(){
   b.onclick=()=>{if(sel<0){$('msg').textContent='Erst eine LED antippen.';return}S.map=S.map.substring(0,sel)+k+S.map.substring(sel+1);api('map','map='+encodeURIComponent(S.map));sel=Math.min(sel+1,S.map.length-1);api('test','led='+sel);zeichnen()};zs.appendChild(b)}
 }
 function laden(){fetch('/api/state').then(r=>r.json()).then(s=>{S=s;$('ver').textContent='Firmware '+s.version;
- for(const k of ['laser','schuss','turbo','fl1','fl2','kanzel','innen'])$(k).value=hex(s[k]);for(const k of ['hell','bK','bI','bH','bL','bF'])$(k).value=s[k];zeichnen();$('msg').textContent=''})}
-for(const k of ['laser','schuss','turbo','fl1','fl2','kanzel','innen','hell','bK','bI','bH','bL','bF'])$(k).oninput=()=>{const v=$(k).value;api('set',k+'='+encodeURIComponent(v))};
-function speichern(){api('save').then(()=>$('msg').textContent='Gespeichert.')}
+ for(const k of ['laser','schuss','turbo','fl1','fl2','kanzel','innen','schein'])$(k).value=hex(s[k]);for(const k of ['hell','bK','bI','bH','bL','bF'])$(k).value=s[k];zeichnen();$('msg').textContent=''})}
+for(const k of ['laser','schuss','turbo','fl1','fl2','kanzel','innen','schein','hell','bK','bI','bH','bL','bF'])$(k).oninput=()=>{const v=$(k).value;api('set',k+'='+encodeURIComponent(v))};
+function speichern(){api('save').then(r=>{if(!r.ok)throw 0;$('msg').textContent='Gespeichert '+new Date().toLocaleTimeString();const o=$('ok');o.textContent='\u2713 Gespeichert';o.classList.add('zeigen');setTimeout(()=>o.classList.remove('zeigen'),1800)}).catch(()=>{$('msg').textContent='Speichern fehlgeschlagen. Ist die Laterne im WLAN?'})}
 laden();
-</script></body></html>)HTML";
+</script><div id="ok"></div></body></html>)HTML";
 
 String stateJson() {
   String j = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\",\"map\":\"" + String(E.map) + "\",\"hell\":" + String(E.hell);
   j += ",\"laser\":" + String(E.laser) + ",\"schuss\":" + String(E.schuss) + ",\"turbo\":" + String(E.turbo) + ",\"fl1\":" + String(E.flamme1);
-  j += ",\"fl2\":" + String(E.flamme2) + ",\"kanzel\":" + String(E.kanzel) + ",\"innen\":" + String(E.innen);
+  j += ",\"fl2\":" + String(E.flamme2) + ",\"kanzel\":" + String(E.kanzel) + ",\"innen\":" + String(E.innen) + ",\"schein\":" + String(E.schein);
   j += ",\"bK\":" + String(E.bK) + ",\"bI\":" + String(E.bI) + ",\"bH\":" + String(E.bH);
   j += ",\"bL\":" + String(E.bL) + ",\"bF\":" + String(E.bF) + "}";
   return j;
@@ -421,6 +433,7 @@ void webStart() {
     if (server.hasArg("fl2"))    E.flamme2 = hexFarbe(server.arg("fl2"));
     if (server.hasArg("kanzel")) E.kanzel  = hexFarbe(server.arg("kanzel"));
     if (server.hasArg("innen"))  E.innen   = hexFarbe(server.arg("innen"));
+    if (server.hasArg("schein")) E.schein  = hexFarbe(server.arg("schein"));
     if (server.hasArg("bK")) E.bK = constrain(server.arg("bK").toInt(), 0, 100);
     if (server.hasArg("bI")) E.bI = constrain(server.arg("bI").toInt(), 0, 100);
     if (server.hasArg("bH")) E.bH = constrain(server.arg("bH").toInt(), 0, 100);
@@ -434,7 +447,7 @@ void webStart() {
     if (zustand == AUS || zustand == FAEHRT_RUNTER) zustandSetzen(FAEHRT_HOCH); else zustandSetzen(FAEHRT_RUNTER);
     antwort(200, "{\"ok\":1}");
   });
-  server.on("/api/save",  HTTP_ANY, []() { einstellungenSpeichern(); antwort(200, "{\"ok\":1}"); });
+  server.on("/api/save",  HTTP_ANY, []() { einstellungenSpeichern(); gespeichertBis = millis() + 600; antwort(200, "{\"ok\":1}"); });
   server.onNotFound([]() { server.sendHeader("Location", "/"); server.send(302, "text/plain", ""); });
   server.begin();
   if (MDNS.begin(HOSTNAME)) MDNS.addService("http", "tcp", 80);
@@ -629,7 +642,7 @@ void loop() {
         c = dim(E.innen, s);
         break;
       }
-      case 'H': c = rgb(230 * lightUp, 230 * lightUp, 210 * lightUp); break;   // Scheinwerfer
+      case 'H': c = dim(E.schein, lightUp); break;   // Scheinwerfer
       case 'F': case 'f': {                         // Flammen
         uint8_t &h = heat[i % 64];
         int target = 90 + random(0, 140) + turboMix * 60;
@@ -679,6 +692,11 @@ void loop() {
   for (int i = 0; i < NUM; i++) {
     float f = bereichsFaktor(E.map[i]);
     if (f < 0.999f) strip.setPixelColor(i, dim(strip.getPixelColor(i), f));
+  }
+
+  // Bestätigung nach dem Speichern: alle zugeordneten LEDs blinken zweimal kurz grün
+  if (now < gespeichertBis && ((gespeichertBis - now) / 150) % 2 == 1) {
+    for (int i = 0; i < NUM; i++) if (E.map[i] != '-') strip.setPixelColor(i, rgb(0, 120, 30));
   }
 
   // Von der Webseite angetippte LED weiß zeigen
