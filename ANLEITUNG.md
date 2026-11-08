@@ -20,7 +20,7 @@ Alle Teile drucken **ohne Stützen**. Jedes Teil wurde Schicht für Schicht gepr
 | --- | --- | --- | --- | --- |
 | `druck-rumpf-unten.stl` | 1 | Hellgrau | 209 × 209 × 58 (diagonal) | Boden unten |
 | `druck-rumpf-oben.stl` | 1 | Hellgrau | 170 × 92 × 41 | Deck unten |
-| `druck-kanzel.stl` | 1 | Anthrazit | 78 × 46 × 25 | Kragen unten |
+| `druck-kanzel.stl` | 1 | **Grau transparent** | 78 × 48 × 26 | Kragen unten |
 | `druck-leitwerk.stl` | 1 | Orange | 56 × 54 × 3 | flach |
 | `druck-fluegel-links.stl` / `-rechts` | je 1 | Anthrazit | 110 × 113 × 14 | flach, Kabelkanal oben |
 | `druck-kanaldeckel-links.stl` / `-rechts` | je 1 | Anthrazit | 63 × 95 × 1,2 | flach |
@@ -38,7 +38,7 @@ Alle STLs sind schon richtig gedreht und passen auf das 260er-Bett. Der Rumpf li
 **Einstellungen:** PLA, 0,4er Düse, 0,2 mm Schicht, **3 Wände** (die Wände sind 1,2 mm, dann druckt der Slicer sie massiv).
 
 - **Flammen und Kanonen:** 4 Wände und 15 % Füllung, die Flammenwand ist 1,6 mm dick. Brim 5 mm, sonst kippen die schmalen Teile.
-- **Stützen:** keine, bei keinem Teil. Brücken bis 30 mm kommen vor (Taster-Löcher im Griff, Mittelstrebe der Kanzel, Laschenschlitze) und sind normal.
+- **Stützen:** keine, bei keinem Teil. Brücken bis 30 mm kommen vor (Taster-Löcher im Griff, Dach der Kanzel 16 mm, Laschenschlitze) und sind normal.
 - Beim Slicen angezeigte blaue Stellen sind Rillen, Kabeltunnel und Lochdecken mit höchstens 1,2 mm Überstand. Die druckt der K2 so.
 
 ## Teile (bestellt am 4.11.)
@@ -123,7 +123,7 @@ TURBO **1,5 Sekunden halten**: Das Schiff fährt herunter, erst gehen die Triebw
 
 ### Einstellseite am Handy (ab Firmware 3.0)
 
-Der ESP liefert eine kleine Webseite aus. Dort tippst du jede LED an (sie leuchtet dann weiß im Schiff) und sagst, was sie ist (Kanzel, Innen, Scheinwerfer, Kanone L/R, Flamme L/R, aus). Außerdem stellst du die Farben von Laser, Turbo, Flammen, Kanzel und Innenlicht ein, die Gesamthelligkeit und ab Firmware 3.6 die Helligkeit je Bereich (Kanzel, Innenlicht, Scheinwerfer, Kanonen, Flammen, je 0 bis 100 %) und kannst Feuer und Turbo testen. „Speichern“ legt alles dauerhaft im ESP ab, es überlebt auch Updates.
+Der ESP liefert eine kleine Webseite aus. Dort tippst du jede LED an (sie leuchtet dann weiß im Schiff) und sagst, was sie ist (Kanzel, Innen, Scheinwerfer, Kanone L/R, Flamme L/R, aus). Außerdem stellst du die Farben ein (Kanonen-Glimmen, Schuss, Turbo, Flammen, Kanzel, Innenlicht), die Gesamthelligkeit und ab Firmware 3.6 die Helligkeit je Bereich (Kanzel, Innenlicht, Scheinwerfer, Kanonen, Flammen, je 0 bis 100 %) und kannst Feuer und Turbo testen. „Speichern“ legt alles dauerhaft im ESP ab, es überlebt auch Updates.
 
 - **Zu Hause:** ESP ist im Heim-WLAN, Seite unter `http://pfeil.local` (oder die IP aus dem Seriellen Monitor, z. B. `http://192.168.1.49`).
 - **Unterwegs:** TURBO beim Einstecken gedrückt halten. Der ESP macht dann ein eigenes WLAN **Pfeil-Laterne** auf (Passwort `pfeil1234`). Handy damit verbinden und `http://192.168.4.1` öffnen. In diesem Modus holt er keine Updates.
@@ -158,8 +158,8 @@ Alle Teile wurden im Modell paarweise auf Überschneidungen geprüft. Dabei kame
 
 ## Zusammenbau Schiff
 
-1. **Papier einkleben.** Transparentpapier innen hinter die Fenster kleben: Oberschale (Deck, Schlitze, TONI), Unterschale (Bauch, Nase, Heckgitter) und Kanzel (Hellblau). Zum Ausschneiden gibt es die **Schnittvorlage** [`vorlagen/fenster-vorlage.pdf`](vorlagen/fenster-vorlage.pdf), zwei A4-Seiten in Originalgröße: mit **100 %** drucken (keine Anpassung an die Seite) und am Kontrollmaß (100 mm) prüfen. Vorlage auf das Transparentpapier legen, durchgezogene Linien schneiden, gestrichelte Linien falzen (alle zur selben Seite), graue Flächen sind die Fenster dahinter. Alle Teile sind 0,5 mm kleiner als der Innenraum, damit nichts aufsteht oder sich wellt.
-   - **Kanzel:** drei Stücke (hinten, Mitte, vorn), sie stoßen auf den beiden Querstreben aneinander. Jedes Stück erst an den vier Linien falzen, dann von unten in die Kanzel schieben und am Sims mit dem Klebestift festkleben. Ein durchgehendes Stück geht nicht, weil sich die Kanzel zwischen den Streben in zwei Richtungen wölbt.
+1. **Papier einkleben.** Transparentpapier innen hinter die Fenster kleben: Oberschale (Deck, Schlitze, TONI), Unterschale (Bauch, Nase, Heckgitter). Zum Ausschneiden gibt es die **Schnittvorlage** [`vorlagen/fenster-vorlage.pdf`](vorlagen/fenster-vorlage.pdf), zwei A4-Seiten in Originalgröße: mit **100 %** drucken (keine Anpassung an die Seite) und am Kontrollmaß (100 mm) prüfen. Vorlage auf das Transparentpapier legen, durchgezogene Linien schneiden, gestrichelte Linien falzen (alle zur selben Seite), graue Flächen sind die Fenster dahinter. Alle Teile sind 0,5 mm kleiner als der Innenraum, damit nichts aufsteht oder sich wellt.
+   - **Kanzel:** braucht kein Papier mehr. Sie ist seit dem 8.11.2026 eine geschlossene Haube aus grau-transparentem Filament mit Streben außen; die Farbe kommt von den LEDs (Kanzelfarbe auf der Einstellseite).
    - **Deck:** ein Stück mit zwei Falzen (Deck → Fase → Wand), reicht vom Heck bis vor die Kanzel.
    - **Seitenwände mit TONI:** zwei gleiche Trapeze, Papier ist durchsichtig, also einfach eins umdrehen.
    - **Heckwand:** an der gestrichelten Trennlinie durchschneiden, oberer Teil in die Oberschale, unterer in die Unterschale.

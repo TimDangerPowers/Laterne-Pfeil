@@ -44,7 +44,7 @@
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
-const char* FIRMWARE_VERSION = "3.6";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "3.7";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 20000;  // so lange wird je Versuch aufs WLAN gewartet
 const uint32_t WLAN_PAUSE_MS  = 120000; // danach Pause, dann neuer Versuch im Hintergrund
@@ -80,7 +80,8 @@ const char ZONEN[] = "KIHLRFf-";       // erlaubte Zeichen
 struct Einstellungen {
   char     map[NUM + 1];
   uint8_t  hell;          // Helligkeit 0-255
-  uint32_t laser;         // Laserfarbe
+  uint32_t laser;         // Kanonen: Glimmen im Leerlauf
+  uint32_t schuss;        // Kanonen: Farbe des Schusses (Puls und Mündungsblitz)
   uint32_t turbo;         // Turbofarbe (Flammen beim Turbo)
   uint32_t flamme1;       // Flamme: Grundfarbe (kühler Teil)
   uint32_t flamme2;       // Flamme: Spitzenfarbe (heißester Teil)
@@ -93,6 +94,7 @@ void standardEinstellungen() {
   strncpy(E.map, LED_MAP_DEFAULT, NUM); E.map[NUM] = 0;
   E.hell = 200;
   E.laser   = 0xFF1E14;   // Rot
+  E.schuss  = 0xFF1E14;   // Rot
   E.turbo   = 0x3C96FF;   // Blau
   E.flamme1 = 0xFF0A00;   // Rot (die grüne LED ist viel heller als die rote, darum wenig Grün)
   E.flamme2 = 0xFF5A00;   // Orange
@@ -258,6 +260,7 @@ void einstellungenLaden() {
   if (m.length() == NUM) strncpy(E.map, m.c_str(), NUM);
   E.hell    = p.getUChar("hell", E.hell);
   E.laser   = p.getUInt("laser", E.laser);
+  E.schuss  = p.getUInt("schuss", E.laser);   // alte Einstellungen: wie bisher die Laserfarbe
   E.turbo   = p.getUInt("turbo", E.turbo);
   E.flamme1 = p.getUInt("fl1", E.flamme1);
   E.flamme2 = p.getUInt("fl2", E.flamme2);
@@ -274,6 +277,7 @@ void einstellungenSpeichern() {
   p.putString("map", E.map);
   p.putUChar("hell", E.hell);
   p.putUInt("laser", E.laser);
+  p.putUInt("schuss", E.schuss);
   p.putUInt("turbo", E.turbo);
   p.putUInt("fl1", E.flamme1);
   p.putUInt("fl2", E.flamme2);
@@ -330,7 +334,8 @@ button.sek{background:#2a3040}
 <div class="zonen" id="zonen"></div>
 </section>
 <section><h2>Farben</h2>
-<div class="zeile"><span>Laser</span><input type="color" id="laser"></div>
+<div class="zeile"><span>Kanonen glimmen</span><input type="color" id="laser"></div>
+<div class="zeile"><span>Schuss</span><input type="color" id="schuss"></div>
 <div class="zeile"><span>Turbo</span><input type="color" id="turbo"></div>
 <div class="zeile"><span>Flamme Grundfarbe</span><input type="color" id="fl1"></div>
 <div class="zeile"><span>Flamme Spitze</span><input type="color" id="fl2"></div>
@@ -367,15 +372,15 @@ function zeichnen(){
   b.onclick=()=>{if(sel<0){$('msg').textContent='Erst eine LED antippen.';return}S.map=S.map.substring(0,sel)+k+S.map.substring(sel+1);api('map','map='+encodeURIComponent(S.map));sel=Math.min(sel+1,S.map.length-1);api('test','led='+sel);zeichnen()};zs.appendChild(b)}
 }
 function laden(){fetch('/api/state').then(r=>r.json()).then(s=>{S=s;$('ver').textContent='Firmware '+s.version;
- for(const k of ['laser','turbo','fl1','fl2','kanzel','innen'])$(k).value=hex(s[k]);for(const k of ['hell','bK','bI','bH','bL','bF'])$(k).value=s[k];zeichnen();$('msg').textContent=''})}
-for(const k of ['laser','turbo','fl1','fl2','kanzel','innen','hell','bK','bI','bH','bL','bF'])$(k).oninput=()=>{const v=$(k).value;api('set',k+'='+encodeURIComponent(v))};
+ for(const k of ['laser','schuss','turbo','fl1','fl2','kanzel','innen'])$(k).value=hex(s[k]);for(const k of ['hell','bK','bI','bH','bL','bF'])$(k).value=s[k];zeichnen();$('msg').textContent=''})}
+for(const k of ['laser','schuss','turbo','fl1','fl2','kanzel','innen','hell','bK','bI','bH','bL','bF'])$(k).oninput=()=>{const v=$(k).value;api('set',k+'='+encodeURIComponent(v))};
 function speichern(){api('save').then(()=>$('msg').textContent='Gespeichert.')}
 laden();
 </script></body></html>)HTML";
 
 String stateJson() {
   String j = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\",\"map\":\"" + String(E.map) + "\",\"hell\":" + String(E.hell);
-  j += ",\"laser\":" + String(E.laser) + ",\"turbo\":" + String(E.turbo) + ",\"fl1\":" + String(E.flamme1);
+  j += ",\"laser\":" + String(E.laser) + ",\"schuss\":" + String(E.schuss) + ",\"turbo\":" + String(E.turbo) + ",\"fl1\":" + String(E.flamme1);
   j += ",\"fl2\":" + String(E.flamme2) + ",\"kanzel\":" + String(E.kanzel) + ",\"innen\":" + String(E.innen);
   j += ",\"bK\":" + String(E.bK) + ",\"bI\":" + String(E.bI) + ",\"bH\":" + String(E.bH);
   j += ",\"bL\":" + String(E.bL) + ",\"bF\":" + String(E.bF) + "}";
@@ -410,6 +415,7 @@ void webStart() {
   server.on("/api/set", HTTP_ANY, []() {      // Farben und Helligkeit (sofort sichtbar, noch nicht gespeichert)
     if (server.hasArg("hell"))   { E.hell = constrain(server.arg("hell").toInt(), 20, 255); strip.setBrightness(E.hell); }
     if (server.hasArg("laser"))  E.laser   = hexFarbe(server.arg("laser"));
+    if (server.hasArg("schuss")) E.schuss  = hexFarbe(server.arg("schuss"));
     if (server.hasArg("turbo"))  E.turbo   = hexFarbe(server.arg("turbo"));
     if (server.hasArg("fl1"))    E.flamme1 = hexFarbe(server.arg("fl1"));
     if (server.hasArg("fl2"))    E.flamme2 = hexFarbe(server.arg("fl2"));
@@ -656,9 +662,9 @@ void loop() {
         int tHit = pos * 45;                              // Puls läuft in 45 ms je Stufe nach vorn
         int d = (int)dt - tHit;
         uint32_t c = dim(E.laser, 0.1f);
-        if (d >= 0 && d < 70) c = E.laser;
-        if (pos == maxPos && d >= 40 && d < 110) c = mix(E.laser, 0xFFFFFF, 0.8f);   // Mündungsblitz
-        if (pos == maxPos && d >= 110 && d < 300) c = dim(E.laser, (300 - d) / 190.0f);
+        if (d >= 0 && d < 70) c = E.schuss;
+        if (pos == maxPos && d >= 40 && d < 110) c = mix(E.schuss, 0xFFFFFF, 0.8f);   // Mündungsblitz
+        if (pos == maxPos && d >= 110 && d < 300) c = mix(dim(E.laser, 0.1f), E.schuss, (300 - d) / 190.0f);
         strip.setPixelColor(ids[k], c);
       }
       if (dt > 320) shotActive = false;

@@ -20,13 +20,13 @@
   ]
  },
  "kanzel": {
-  "gewicht_g": 3,
+  "gewicht_g": 15,
   "valid": true,
   "solids": 1,
   "druckgroesse_mm": [
    78,
-   46,
-   25
+   48,
+   26
   ]
  },
  "leitwerk": {
@@ -89,18 +89,18 @@
   "valid": true,
   "solids": 1
  },
- "flammenhalter-links": {
-  "gewicht_g": 3,
+ "flammengitter-links": {
+  "gewicht_g": 0,
   "valid": true,
   "solids": 1,
   "druckgroesse_mm": [
-   25,
-   25,
-   31
+   28,
+   28,
+   1
   ]
  },
- "flammenhalter-rechts": {
-  "gewicht_g": 3,
+ "flammengitter-rechts": {
+  "gewicht_g": 0,
   "valid": true,
   "solids": 1
  },
@@ -189,10 +189,10 @@
    1
   ]
  },
- "_summe_g": 252,
+ "_summe_g": 257,
  "_schwerpunkt_mm": [
-  52.5,
+  57.5,
   -0.2,
-  -2.6
+  -1.0
  ]
 }

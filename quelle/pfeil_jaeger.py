@@ -7,7 +7,7 @@ Teile
   rumpf-unten     Unterschale mit Nase, Flügelschlitzen, Bauchfenstern, Aufhängepfosten und Klettschlitzen für die Akkus
   rumpf-oben      Oberschale (Deck) mit Fenstern, TONI-Schriftzug an beiden Seiten, Kanzel- und Leitwerksöffnung;
                   liegt lose auf der Unterschale (Kragen) und wird zum Einschalten abgehoben
-  kanzel          Cockpitrahmen, innen blaues Transparentpapier
+  kanzel          geschlossene Haube aus grau-transparentem Filament mit Streben außen
   leitwerk        Seitenleitwerk, steckt im Deck
   fluegel-links/-rechts   Flügel mit Kanone, Laschen werden in die Rumpfschlitze geklebt
   triebwerk (2x)  Triebwerksgondel, sitzt auf dem Flügel, hinten steckt die Flamme
@@ -295,20 +295,55 @@ def canopy_opening(shrink):
     return cq.Workplane("XY").polyline(pts).close()
 
 
+CAN_STRUT_W = 3.0               # Streben außen auf der transparenten Haube: Breite
+CAN_STRUT_H = 1.2               # ... und wie weit sie über der Haube stehen
+
+
 def make_canopy():
+    """Geschlossene Haube, in grau-transparentem Filament gedruckt (kein Papier mehr). Außen stehen dicke Streben:
+    zwei Querstreben und ein Mittelsteg über das Dach (kein Sims rundum, der wäre ein Überhang). Druckt mit dem Kragen auf dem Bett."""
     ws = [sec_wire(x, w, zt, Z_TOP - 3, ct, 0.01) for x, w, zt, ct in CANOPY]
     outer = ruled(ws)
-    inner = ruled([sec_wire(x, w - 2 * T, zt - T, Z_TOP - 5, max(ct - 0.5, 0.01), 0.01) for x, w, zt, ct in CANOPY])
+    # Innenraum: vorn und hinten steigt die Decke mit 45° an (außen ist es flacher). So druckt die geschlossene Haube
+    # ohne Stützen; an den Enden bleibt ein massiver transparenter Keil stehen, der schön mitleuchtet.
+    def w_at(x):
+        for (xa, wa, *_), (xb, wb, *_) in zip(CANOPY, CANOPY[1:]):
+            if xa <= x <= xb:
+                return wa + (wb - wa) * (x - xa) / (xb - xa)
+    (x1, _, zt1, ct1), (x2, _, zt2, ct2) = CANOPY[1], CANOPY[2]
+    xr = x1 - (zt1 - T - (Z_TOP + 1.0))          # hinten: 45° von Z_TOP+1 bis zur Dachhöhe bei x1
+    xf = x2 + (zt2 - T - (Z_TOP + 1.0))          # vorn: 45° von der Dachhöhe bei x2 bis Z_TOP+1
+    inner_secs = [(xr, w_at(xr) - 2 * T, Z_TOP + 1.0, 0.5),
+                  (x1, CANOPY[1][1] - 2 * T, zt1 - T, ct1 - 0.5),
+                  (x2, CANOPY[2][1] - 2 * T, zt2 - T, ct2 - 0.5),
+                  (xf, w_at(xf) - 2 * T, Z_TOP + 1.0, 0.5)]
+    inner = ruled([sec_wire(x, w, zt, Z_TOP - 5, ct, 0.01) for x, w, zt, ct in inner_secs])
     c = outer.cut(inner).intersect(box(-10, 300, -100, 100, Z_TOP, 100))
-    # Scheiben ausschneiden: übrig bleiben Sims, Mittelsteg, zwei Querstreben, Front- und Heckrahmen
-    xs = [CANOPY[0][0] + 3, CAN_FRAMES[0] - 1.5, CAN_FRAMES[0] + 1.5, CAN_FRAMES[1] - 1.5, CAN_FRAMES[1] + 1.5, CANOPY[-1][0] - 4]
-    for a, b in ((xs[0], xs[1]), (xs[2], xs[3]), (xs[4], xs[5])):
-        for s in (1, -1):
-            c = c.cut(box(a, b, 1.6 if s > 0 else -40, 40 if s > 0 else -1.6, CAN_SILL, 80))
+    # Streben: Haube um CAN_STRUT_H aufgedickt, nur in schmalen Bändern übernommen
+    g = CAN_STRUT_H
+    fat = ruled([sec_wire(x, w + 2 * g, zt + g, Z_TOP - 3, ct + 0.41 * g, 0.01) for x, w, zt, ct in CANOPY])
+    shell = fat.cut(outer).intersect(box(-10, 300, -100, 100, Z_TOP, 100))
+    hw = CAN_STRUT_W / 2
+    bands = box(CAN_FRAMES[0] - hw, CAN_FRAMES[0] + hw, -60, 60, Z_TOP, 100)\
+        .union(box(CAN_FRAMES[1] - hw, CAN_FRAMES[1] + hw, -60, 60, Z_TOP, 100))\
+        .union(box(80, 180, -hw, hw, Z_TOP, 100))
+    c = c.union(shell.intersect(bands))
+    # Unterkante außen 45° angefast: die Haube steht sonst 1 mm frei über dem Kragen (Überhang beim Druck)
+    w0 = cq.Wire.assembleEdges(canopy_opening(CAN_RIM).wires().val().Edges()).moved(cq.Location(cq.Vector(0, 0, Z_TOP - 0.01)))
+    w1 = cq.Wire.assembleEdges(canopy_opening(-CAN_STRUT_H - 0.5).wires().val().Edges())\
+        .moved(cq.Location(cq.Vector(0, 0, Z_TOP + CAN_RIM + CAN_STRUT_H + 0.5)))
+    keep = cq.Workplane().add(cq.Solid.makeLoft([w0, w1], True))\
+        .union(box(-10, 300, -100, 100, Z_TOP + CAN_RIM + CAN_STRUT_H + 0.5 - 0.01, 100))
+    c = c.intersect(keep)
     # Kragen nach unten in die Deck-Öffnung: gleiche Form wie die Kanzel, 1 mm nach innen versetzt
     outer_ring = canopy_opening(CAN_RIM).extrude(3 + T + 0.5).translate((0, 0, Z_TOP - T - 3))
     inner_ring = canopy_opening(CAN_RIM + T).extrude(3 + T + 2).translate((0, 0, Z_TOP - T - 4))
-    return c.union(outer_ring.cut(inner_ring))
+    c = c.union(outer_ring.cut(inner_ring))
+    # Unter den massiven Keilen vorn und hinten auch den Kragen füllen, sonst hängt die Keil-Unterseite frei in der Luft
+    fill = canopy_opening(CAN_RIM).extrude(3 + T + 0.5).translate((0, 0, Z_TOP - T - 3))
+    c = c.union(fill.intersect(box(-10, xr, -100, 100, -100, 100)))
+    c = c.union(fill.intersect(box(xf, 300, -100, 100, -100, 100)))
+    return c
 
 
 # ================================================================ Leitwerk
