@@ -1,6 +1,6 @@
 {
  "rumpf-unten": {
-  "gewicht_g": 52,
+  "gewicht_g": 53,
   "valid": true,
   "solids": 1,
   "druckgroesse_mm": [
@@ -174,10 +174,10 @@
    1
   ]
  },
- "_summe_g": 245,
+ "_summe_g": 246,
  "_schwerpunkt_mm": [
-  54.7,
+  55.0,
   -0.2,
-  -2.7
+  -2.8
  ]
 }

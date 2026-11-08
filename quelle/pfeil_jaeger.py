@@ -234,9 +234,10 @@ def make_hull_parts():
     for y in (-12, 0, 12):
         g = box(-2, 3, y - 3, y + 3, -22, 18)
         top, bot = top.cut(g), bot.cut(g)
-    # Bauch: zwei lange Fenster
-    for y in (-26, 26):
-        bot = bot.cut(box(24, 150, y - 4, y + 4, -40, -20))
+    # Bauch: zwei lange Fenster. Sie bleiben in der flachen Bodenplatte (außen mindestens 3,5 mm Rand bis zur Fase),
+    # sonst bricht das Fenster vorn durch die Fase und lässt einen freistehenden Splitter stehen (Druckabbruch 2026-11-08).
+    for y in (-23, 23):
+        bot = bot.cut(box(24, 120, y - 3.5, y + 3.5, -40, -20))
     # Nase: zwei Lüftungsschlitze oben, zwei Scheinwerfer in der Spitze
     for y in (-10, 10):
         bot = bot.cut(box(182, 205, y - 2.5, y + 2.5, -10, 40))
