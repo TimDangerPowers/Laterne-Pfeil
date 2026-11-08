@@ -12,6 +12,7 @@ Teile
   fluegel-links/-rechts   Flügel mit Kanone, Laschen werden in die Rumpfschlitze geklebt
   triebwerk (2x)  Triebwerksgondel, sitzt auf dem Flügel, hinten steckt die Flamme
   flamme (2x)     gedrehte Flamme, nimmt die Funkel-Lichterkette auf
+  flammenhalter (2x) Hülse mit Gitterplatte im Kragen der Flamme, trägt die zwei LEDs
 
 Kraftfluss: Stab -> Schnur -> Schlitz im Deck (nur durchgeführt) -> Knoten am Pfosten der Unterschale.
 Die Oberschale liegt nur auf; die Schnur hält sie mittig.
@@ -538,6 +539,46 @@ def make_flame():
     return cq.Workplane("XY").add(outer.cut(inner).fuse(tube).clean())
 
 
+# ================================================================ Flammenhalter
+# Hülse, die von hinten in den Kragen der Flamme gesteckt wird. Am Ende eine Gitterplatte mit zwei Rinnen, in die
+# die beiden LED-Kapseln (5,4 mm) quer gelegt und mit Heißkleber festgeklebt werden. Vier Spitzbogenfenster
+# lassen das Licht seitlich in die Flamme, die Drähte laufen durch die Fenster. Druckt mit der Platte auf dem Bett.
+FH_R = FL_SPIGOT_R - FL_T - 0.15      # außen, leichte Klemmung im Kragen
+FH_T = 1.2
+FH_Z0, FH_Z1 = -18.0, FL_SPIGOT - 1.0  # Platte bei z = -18 (in der Flamme), Hülse bis knapp an den Anschlag
+FH_PLATE = 1.6
+FH_RIB_H, FH_RIB_Y = 2.5, 7.4          # Rinnen 6,2 mm breit zwischen Rippen bei y = -7,4 / 0 / +7,4
+FH_LEG = 4.0                            # Stege zwischen den Fenstern
+FH_WIN_TOP = 7.0                        # Fenster gerade so hoch, darüber 45°-Spitzbogen
+
+
+def make_flame_holder():
+    h = FH_Z1 - FH_Z0
+    tube = cq.Workplane("XY").workplane(offset=FH_Z0).circle(FH_R).circle(FH_R - FH_T).extrude(h)
+    plate = cq.Workplane("XY").workplane(offset=FH_Z0).circle(FH_R - 0.01).extrude(FH_PLATE)
+    # Gitterlöcher: in jeder Rinne eine Reihe 2,6 × 4,6 mm (Licht nach vorn in die Spitze, Kleber greift durch),
+    # außerhalb der Rippen eine Reihe 2,6 × 2,0 mm
+    for yc, hy in ((3.7, 2.3), (-3.7, 2.3), (9.6, 1.0), (-9.6, 1.0)):
+        for i in range(-3, 4):
+            x = i * 3.6
+            if math.hypot(abs(x) + 1.3, abs(yc) + hy) > FH_R - FH_T - 0.5:
+                continue
+            plate = plate.cut(box(x - 1.3, x + 1.3, yc - hy, yc + hy, FH_Z0 - 1, FH_Z0 + FH_PLATE + 1))
+    body = tube.union(plate)
+    for y in (-FH_RIB_Y, 0.0, FH_RIB_Y):
+        body = body.union(box(-FH_R + 0.5, FH_R - 0.5, y - 0.6, y + 0.6, FH_Z0 + FH_PLATE - 0.01, FH_Z0 + FH_PLATE + FH_RIB_H)
+                          .intersect(cq.Workplane("XY").workplane(offset=FH_Z0).circle(FH_R - 0.3).extrude(10)))
+    # Vier Fenster mit Spitzbogen (45°), Stege bei 45°, 135°, 225°, 315°
+    half = (2 * math.pi * FH_R / 4 - FH_LEG) / 2 * 0.9     # halbe Sehne, etwas schmaler als der Bogen
+    z_a = FH_Z0 + FH_PLATE + FH_RIB_H + 0.4                  # Fenster beginnt über den Rippen
+    z_b = z_a + FH_WIN_TOP
+    prof = [(-half, z_a), (half, z_a), (half, z_b), (0, z_b + half), (-half, z_b)]
+    for ang in (0, 90, 180, 270):
+        cutter = cq.Workplane("YZ").polyline(prof).close().extrude(FH_R + 2)   # entlang +x
+        body = body.cut(cutter.rotate((0, 0, 0), (0, 0, 1), ang))
+    return body
+
+
 # ================================================================ Zusammenbau
 def assembly_pose(name, s):
     if name in ("triebwerk-links", "triebwerk-rechts"):
@@ -545,7 +586,7 @@ def assembly_pose(name, s):
         if name.endswith("rechts"):
             s = s.mirror("XZ")
         return s.translate((ENG_X0, y, ENG_Z))
-    if name in ("flamme-links", "flamme-rechts"):
+    if name in ("flamme-links", "flamme-rechts", "flammenhalter-links", "flammenhalter-rechts"):
         y = ENG_Y if name.endswith("links") else -ENG_Y
         # Kragen (z 0..FL_SPIGOT) zeigt nach +x in die Düse, Spitze nach -x
         s = s.rotate((0, 0, 0), (0, 1, 0), 90)
@@ -562,8 +603,10 @@ def print_pose(name, s):
         s = s.rotate((0, 0, 0), (1, 0, 0), 180)                    # Deck aufs Bett
     elif name.startswith("triebwerk"):
         s = s.rotate((0, 0, 0), (0, 1, 0), -90)                    # Düse aufs Bett, Spitze nach oben
-    elif name.startswith("flamme"):
+    elif name.startswith("flamme-"):
         s = s.rotate((0, 0, 0), (1, 0, 0), 180)                    # Kragen aufs Bett
+    elif name.startswith("flammenhalter"):
+        pass                                                        # Gitterplatte liegt schon unten
     elif name.startswith("kanone"):
         s = s.rotate((0, 0, 0), (0, 1, 0), -90)                    # Mündung nach oben
     elif name == "griff":
@@ -600,6 +643,7 @@ if __name__ == "__main__":
     parts = {"rumpf-unten": bot, "rumpf-oben": top, "kanzel": make_canopy(), "leitwerk": make_fin(),
              "fluegel-links": wing, "fluegel-rechts": wing, "triebwerk-links": eng, "triebwerk-rechts": eng,
              "flamme-links": flame, "flamme-rechts": flame,
+             "flammenhalter-links": make_flame_holder(), "flammenhalter-rechts": make_flame_holder(),
              "kanone-links": make_cannon(), "kanone-rechts": make_cannon(), "griff": make_grip(),
              "griff-boden": make_grip_lid(), "griff-bock": make_grip_block(),
              "kanaldeckel-links": covers[0], "kanaldeckel-rechts": covers[0],

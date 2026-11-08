@@ -27,6 +27,7 @@ Alle Teile drucken **ohne Stützen**. Jedes Teil wurde Schicht für Schicht gepr
 | `druck-fussdeckel-links.stl` / `-rechts` | je 1 | Anthrazit | 26 × 10 × 1,2 | flach |
 | `druck-triebwerk.stl` | **2** | Hellgrau | 36 × 36 × 118 | Düse unten |
 | `druck-flamme.stl` | **2** | **Grau transparent** | 40 × 43 × 84 | Kragen unten, Brim |
+| `druck-flammenhalter.stl` | **2** | Grau transparent oder Hellgrau | 25 × 25 × 31 | Gitterplatte unten |
 | `druck-kanone.stl` | **2** | **Grau transparent** | 14 × 16 × 76 | Mündung oben, Brim |
 | `druck-griff.stl` | 1 | Anthrazit | 101 × 39 × 37 | Oberseite unten |
 | `druck-griff-boden.stl` | 1 | Anthrazit | 96 × 34 × 13 | Platte unten, Sättel oben |
@@ -161,12 +162,12 @@ Die Zuordnung geht am einfachsten über die Einstellseite (oben). Der Zählmodus
 5. **Lichterkette verlegen**, vom Eingangsstecker aus. Der Kabelkanal auf jedem Flügel und der Schacht im Kanonenfuß sind **oben offen**: Du legst den Draht einfach hinein und klebst danach die beiden Deckel (Kanaldeckel, Fußdeckel) mit einem Tropfen Heißkleber in ihre Absätze. Alle Löcher (Rumpfseite 6,4 mm, Tunnel in Fuß und Zapfen 6,6 mm, Kanal 7 mm) sind so groß, dass die LED-Kapseln (5,4 mm) durchpassen. Die LEDs sitzen 10 cm auseinander. Liegt eine LED an der falschen Stelle, legst du den Draht davor in eine Schlaufe und klebst sie fest. Die Reihenfolge im Code passt zu diesem Weg, mit dem Zählmodus kannst du sie anpassen.
    1. Der Stecker liegt in der Mitte unter dem Deck-Schlitz. Nach vorn: **2 LEDs unter die Kanzel** (Schlaufe dazwischen).
    2. Durch das **vordere Kabelloch links** (102 mm vor dem Heck) in den offenen Kabelkanal des Flügels, in den Schacht im Kanonenfuß, dann durch den Tunnel im Zapfen in die **Kanone**. Eine LED kommt vorn an die Mündung, der Draht geht auf demselben Weg zurück. Erst dann die Kanone auf den Zapfen stecken und festkleben. Kanal- und Fußdeckel aufsetzen.
-   3. Eine LED innen, dann durch das **hintere Kabelloch links** (40 mm vor dem Heck) durch das Loch im Triebwerkssockel ins Triebwerk und **eine LED in die Flamme**, zurück.
+   3. Eine LED innen, dann durch das **hintere Kabelloch links** (40 mm vor dem Heck) durch das Loch im Triebwerkssockel ins Triebwerk und in die **Flamme**. Dort sitzt der **Flammenhalter** (siehe Schritt 6): Die Kette läuft durch ein Fenster des Halters hinein, **zwei LEDs** werden quer in die beiden Rinnen der Gitterplatte gelegt (Draht als Schlaufe dazwischen) und mit Heißkleber durch das Gitter festgeklebt, dann geht der Draht durch das gegenüberliegende Fenster zurück.
    4. Quer durch den Rumpf, zwei LEDs als Innenlicht.
    5. Rechts genauso: erst Flamme, dann Kanone.
    6. Eine LED innen, dann nach vorn in die Nase: zwei LEDs von innen in die **Scheinwerferlöcher** (5,6 mm) in der Spitze drücken, mit einer Drahtschlaufe dazwischen.
    7. Der Rest der Kette bleibt aus. Wickel ihn locker und klebe ihn innen fest. Wenn alles läuft, kannst du die Kette 2 LEDs hinter dem letzten Scheinwerfer abschneiden. Das Ende mit Klebeband isolieren.
-6. **Flammen** von hinten in die Düsen schieben, bis sie am Anschlag sitzen. Sie halten durch Klemmung.
+6. **Flammenhalter und Flammen.** Der Flammenhalter ist eine kurze Hülse mit einer Gitterplatte: Er wird mit der Gitterplatte voran von hinten in den Kragen der Flamme geschoben, bis er bündig mit dem Kragen abschließt (die Platte sitzt dann 18 mm tief in der Flamme), und mit einem Tropfen Heißkleber am Kragen gesichert. Die vier Spitzbogenfenster lassen das Licht seitlich in die Flamme, das Gitter nach vorn in die Spitze. Die beiden LEDs legst du in die Rinnen (6 mm breit, die Kapseln passen genau) und klebst sie fest. Danach die Flamme von hinten in die Düse schieben, bis sie am Anschlag sitzt. Sie hält durch Klemmung.
 7. **Kabel zum Griff:** Das JST-Verlängerungskabel läuft zusammen mit der Schnur durch den Schlitz im Deck (10 mm breit, der Stecker passt durch). Innen steckst du es direkt auf den Eingang der Kette. Damit ein Ruck nicht am Stecker zieht, das Kabel innen einmal locker um den Pfosten legen. Am Griff steckst du es auf den abgeschnittenen Stecker. So kannst du Schiff und Griff jederzeit trennen.
 
 ## Aufhängen und Ausbalancieren
