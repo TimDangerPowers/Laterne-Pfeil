@@ -44,7 +44,7 @@
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
-const char* FIRMWARE_VERSION = "3.3";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "3.4";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 20000;  // so lange wird je Versuch aufs WLAN gewartet
 const uint32_t WLAN_PAUSE_MS  = 120000; // danach Pause, dann neuer Versuch im Hintergrund
@@ -360,19 +360,25 @@ uint32_t hexFarbe(String v) {          // "#rrggbb" oder "rrggbb"
   return (uint32_t)strtoul(v.c_str(), nullptr, 16) & 0xFFFFFF;
 }
 
+void antwort(int code, const String& json) {   // Verbindung danach schließen: der Server kann nur eine auf einmal
+  server.sendHeader("Connection", "close");
+  server.sendHeader("Cache-Control", "no-store");
+  server.send(code, "application/json", json);
+}
+
 void webStart() {
-  server.on("/", HTTP_GET, []() { server.send_P(200, "text/html; charset=utf-8", SEITE); });
-  server.on("/api/state", HTTP_ANY, []() { server.send(200, "application/json", stateJson()); });
+  server.on("/", HTTP_GET, []() { server.sendHeader("Connection", "close"); server.send_P(200, "text/html; charset=utf-8", SEITE); });
+  server.on("/api/state", HTTP_ANY, []() { antwort(200, stateJson()); });
   server.on("/api/test", HTTP_ANY, []() {     // eine LED weiß zeigen
     testLed = server.arg("led").toInt(); testBis = millis() + 4000;
-    server.send(200, "application/json", "{\"ok\":1}");
+    antwort(200, "{\"ok\":1}");
   });
   server.on("/api/map", HTTP_ANY, []() {
     String m = server.arg("map");
     bool ok = m.length() == NUM;
     for (int i = 0; ok && i < NUM; i++) if (!strchr(ZONEN, m[i])) ok = false;
     if (ok) { strncpy(E.map, m.c_str(), NUM); zonenNeu = true; }
-    server.send(ok ? 200 : 400, "application/json", ok ? "{\"ok\":1}" : "{\"ok\":0}");
+    antwort(ok ? 200 : 400, ok ? "{\"ok\":1}" : "{\"ok\":0}");
   });
   server.on("/api/set", HTTP_ANY, []() {      // Farben und Helligkeit (sofort sichtbar, noch nicht gespeichert)
     if (server.hasArg("hell"))   { E.hell = constrain(server.arg("hell").toInt(), 20, 255); strip.setBrightness(E.hell); }
@@ -382,15 +388,15 @@ void webStart() {
     if (server.hasArg("fl2"))    E.flamme2 = hexFarbe(server.arg("fl2"));
     if (server.hasArg("kanzel")) E.kanzel  = hexFarbe(server.arg("kanzel"));
     if (server.hasArg("innen"))  E.innen   = hexFarbe(server.arg("innen"));
-    server.send(200, "application/json", "{\"ok\":1}");
+    antwort(200, "{\"ok\":1}");
   });
-  server.on("/api/fire",  HTTP_ANY, []() { feuer.pressed = true; server.send(200, "application/json", "{\"ok\":1}"); });
-  server.on("/api/turbo", HTTP_ANY, []() { turboWeb = true; server.send(200, "application/json", "{\"ok\":1}"); });
+  server.on("/api/fire",  HTTP_ANY, []() { feuer.pressed = true; antwort(200, "{\"ok\":1}"); });
+  server.on("/api/turbo", HTTP_ANY, []() { turboWeb = true; antwort(200, "{\"ok\":1}"); });
   server.on("/api/power", HTTP_ANY, []() {    // An/Aus umschalten
     if (zustand == AUS || zustand == FAEHRT_RUNTER) zustandSetzen(FAEHRT_HOCH); else zustandSetzen(FAEHRT_RUNTER);
-    server.send(200, "application/json", "{\"ok\":1}");
+    antwort(200, "{\"ok\":1}");
   });
-  server.on("/api/save",  HTTP_ANY, []() { einstellungenSpeichern(); server.send(200, "application/json", "{\"ok\":1}"); });
+  server.on("/api/save",  HTTP_ANY, []() { einstellungenSpeichern(); antwort(200, "{\"ok\":1}"); });
   server.onNotFound([]() { server.sendHeader("Location", "/"); server.send(302, "text/plain", ""); });
   server.begin();
   if (MDNS.begin(HOSTNAME)) MDNS.addService("http", "tcp", 80);
