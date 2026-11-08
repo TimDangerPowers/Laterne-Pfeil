@@ -114,7 +114,7 @@ Der Boden sitzt **innerhalb** der Griffwände und schließt unten bündig ab. Vo
 
 ### Updates über WLAN (optional)
 
-Oben im Sketch stehen `WLAN_NAME` und `WLAN_PASS`. Trägst du dort dein Heim-WLAN ein, schaut der ESP bei jedem Einschalten für höchstens 8 Sekunden nach, ob es auf timjanke.me eine neuere Firmware gibt (Ordner `firmware/` in diesem Repo). Gibt es eine, lädt er sie (alle LEDs pulsieren blau) und startet neu. Ohne WLAN in Reichweite läuft das Licht einfach sofort los. Das erste Aufspielen geht nur per USB. Die Datei mit dem Passwort nicht weitergeben.
+Oben im Sketch stehen `WLAN_NAME` und `WLAN_PASS`. Trägst du dort dein Heim-WLAN ein, schaut der ESP bei jedem Einschalten für höchstens 8 Sekunden nach, ob es auf timjanke.me eine neuere Firmware gibt (Ordner `firmware/` in diesem Repo). Gibt es eine, lädt er sie (alle LEDs pulsieren blau) und startet neu. Die Firmware baut GitHub selbst (siehe `firmware/README.md`), du musst dafür nichts am PC tun. Ohne WLAN in Reichweite läuft das Licht einfach sofort los. Das erste Aufspielen geht nur per USB. Die Datei mit dem Passwort nicht weitergeben.
 
 ### An und Aus
 
