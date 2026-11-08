@@ -12,7 +12,7 @@ Teile
   fluegel-links/-rechts   Flügel mit Kanone, Laschen werden in die Rumpfschlitze geklebt
   triebwerk (2x)  Triebwerksgondel, sitzt auf dem Flügel, hinten steckt die Flamme
   flamme (2x)     gedrehte Flamme, nimmt die Funkel-Lichterkette auf
-  flammenhalter (2x) Hülse mit Gitterplatte im Kragen der Flamme, trägt die zwei LEDs
+  flammengitter (2x) dünne Gitterscheibe auf dem Kragenende der Flamme, trägt die zwei LEDs
 
 Kraftfluss: Stab -> Schnur -> Schlitz im Deck (nur durchgeführt) -> Knoten am Pfosten der Unterschale.
 Die Oberschale liegt nur auf; die Schnur hält sie mittig.
@@ -546,37 +546,26 @@ def make_flame():
     return cq.Workplane("XY").add(outer.cut(inner).fuse(tube).clean())
 
 
-# ================================================================ Flammenhalter
-# Hülse, die von hinten in den Kragen der Flamme gesteckt wird. Am Ende eine Gitterplatte mit zwei Rinnen, in die
-# die beiden LED-Kapseln (5,4 mm) quer gelegt und mit Heißkleber festgeklebt werden. Vier Spitzbogenfenster
-# lassen das Licht seitlich in die Flamme, die Drähte laufen durch die Fenster. Druckt mit der Platte auf dem Bett.
-FH_R = FL_SPIGOT_R - FL_T - 0.15      # außen, leichte Klemmung im Kragen
-FH_T = 1.2
-FH_Z0, FH_Z1 = -18.0, FL_SPIGOT - 1.0  # Platte bei z = -18 (in der Flamme), Hülse bis knapp an den Anschlag
-FH_PLATE = 1.6
-FH_LEG = 4.0                            # Stege zwischen den Fenstern
-FH_WIN_TOP = 7.0                        # Fenster gerade so hoch, darüber 45°-Spitzbogen
+# ================================================================ Flammengitter
+# Dünne Gitterscheibe, wird auf das offene Ende des Flammenkragens geklebt (verschwindet im Triebwerk).
+# Die zwei LEDs werden auf das Gitter gelegt und festgeklebt, ihr Licht scheint durch die Maschen in die Flamme.
+FG_R = FL_SPIGOT_R - 0.1      # gleicher Außenradius wie der Kragen, passt mit ihm in die Düse
+FG_T = 1.0                    # Dicke
+FG_RIM = 1.6                  # Ring außen = Klebefläche auf dem Kragen (Kragenwand 1,6 mm)
+FG_BAR, FG_PITCH = 1.0, 6.0   # Stege 1 mm, Maschen 5 × 5 mm
 
 
-def make_flame_holder():
-    h = FH_Z1 - FH_Z0
-    tube = cq.Workplane("XY").workplane(offset=FH_Z0).circle(FH_R).circle(FH_R - FH_T).extrude(h)
-    plate = cq.Workplane("XY").workplane(offset=FH_Z0).circle(FH_R - 0.01).extrude(FH_PLATE)
-    # Zwei durchgehende Schlitze 8 × 20 mm: die LED-Kapsel samt angelöteten Drähten wird von hinten durchgeschoben,
-    # liegt dann vorn in der Flamme und wird am Schlitz mit Heißkleber fixiert. Mittelsteg 3 mm.
-    inner = cq.Workplane("XY").workplane(offset=FH_Z0 - 1).circle(FH_R - FH_T - 0.6).extrude(FH_PLATE + 2)
-    for yc in (-5.5, 5.5):
-        plate = plate.cut(box(-12.0, 12.0, yc - 4.0, yc + 4.0, FH_Z0 - 1, FH_Z0 + FH_PLATE + 1).intersect(inner))
-    body = tube.union(plate)
-    # Vier Fenster mit Spitzbogen (45°), Stege bei 45°, 135°, 225°, 315°
-    half = (2 * math.pi * FH_R / 4 - FH_LEG) / 2 * 0.9     # halbe Sehne, etwas schmaler als der Bogen
-    z_a = FH_Z0 + FH_PLATE + 0.4
-    z_b = z_a + FH_WIN_TOP
-    prof = [(-half, z_a), (half, z_a), (half, z_b), (0, z_b + half), (-half, z_b)]
-    for ang in (0, 90, 180, 270):
-        cutter = cq.Workplane("YZ").polyline(prof).close().extrude(FH_R + 2)   # entlang +x
-        body = body.cut(cutter.rotate((0, 0, 0), (0, 0, 1), ang))
-    return body
+def make_flame_grid():
+    disc = cq.Workplane("XY").circle(FG_R).extrude(FG_T)
+    hole = cq.Workplane("XY").workplane(offset=-1).circle(FG_R - FG_RIM).extrude(FG_T + 2)
+    g = disc.cut(hole)
+    lattice = None
+    n = int(FG_R / FG_PITCH) + 1
+    for i in range(-n, n + 1):
+        for bar in (box(i * FG_PITCH - FG_BAR / 2, i * FG_PITCH + FG_BAR / 2, -FG_R, FG_R, 0, FG_T),
+                    box(-FG_R, FG_R, i * FG_PITCH - FG_BAR / 2, i * FG_PITCH + FG_BAR / 2, 0, FG_T)):
+            lattice = bar if lattice is None else lattice.union(bar)
+    return g.union(lattice.intersect(cq.Workplane("XY").circle(FG_R - FG_RIM + 0.05).extrude(FG_T)))
 
 
 # ================================================================ Zusammenbau
@@ -586,10 +575,14 @@ def assembly_pose(name, s):
         if name.endswith("rechts"):
             s = s.mirror("XZ")
         return s.translate((ENG_X0, y, ENG_Z))
-    if name in ("flamme-links", "flamme-rechts", "flammenhalter-links", "flammenhalter-rechts"):
+    if name in ("flamme-links", "flamme-rechts"):
         y = ENG_Y if name.endswith("links") else -ENG_Y
         # Kragen (z 0..FL_SPIGOT) zeigt nach +x in die Düse, Spitze nach -x
         s = s.rotate((0, 0, 0), (0, 1, 0), 90)
+        return s.translate((ENG_X0 + THROAT_U1 - FL_SPIGOT, y, ENG_Z))
+    if name in ("flammengitter-links", "flammengitter-rechts"):
+        y = ENG_Y if name.endswith("links") else -ENG_Y
+        s = s.translate((0, 0, FL_SPIGOT)).rotate((0, 0, 0), (0, 1, 0), 90)   # auf dem Kragenende der Flamme
         return s.translate((ENG_X0 + THROAT_U1 - FL_SPIGOT, y, ENG_Z))
     if name in ("fluegel-rechts", "kanone-rechts", "kanaldeckel-rechts", "fussdeckel-rechts"):
         return s.mirror("XZ")
@@ -605,8 +598,8 @@ def print_pose(name, s):
         s = s.rotate((0, 0, 0), (0, 1, 0), -90)                    # Düse aufs Bett, Spitze nach oben
     elif name.startswith("flamme-"):
         s = s.rotate((0, 0, 0), (1, 0, 0), 180)                    # Kragen aufs Bett
-    elif name.startswith("flammenhalter"):
-        pass                                                        # Gitterplatte liegt schon unten
+    elif name.startswith("flammengitter"):
+        pass                                                        # flach
     elif name.startswith("kanone"):
         s = s.rotate((0, 0, 0), (0, 1, 0), -90)                    # Mündung nach oben
     elif name == "griff":
@@ -643,7 +636,7 @@ if __name__ == "__main__":
     parts = {"rumpf-unten": bot, "rumpf-oben": top, "kanzel": make_canopy(), "leitwerk": make_fin(),
              "fluegel-links": wing, "fluegel-rechts": wing, "triebwerk-links": eng, "triebwerk-rechts": eng,
              "flamme-links": flame, "flamme-rechts": flame,
-             "flammenhalter-links": make_flame_holder(), "flammenhalter-rechts": make_flame_holder(),
+             "flammengitter-links": make_flame_grid(), "flammengitter-rechts": make_flame_grid(),
              "kanone-links": make_cannon(), "kanone-rechts": make_cannon(), "griff": make_grip(),
              "griff-boden": make_grip_lid(), "griff-bock": make_grip_block(),
              "kanaldeckel-links": covers[0], "kanaldeckel-rechts": covers[0],
