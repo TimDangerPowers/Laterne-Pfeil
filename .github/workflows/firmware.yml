@@ -1,0 +1,62 @@
+name: Firmware bauen
+
+# Baut die Firmware für den ESP32-C3-Zero, sobald sich der Sketch ändert, und legt
+# firmware/pfeil_licht.bin + firmware/version.txt ins Repo. Die Laterne holt sich die Datei beim Einschalten.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "elektronik/pfeil_licht/**"
+      - ".github/workflows/firmware.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: firmware
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: ESP32-Core und Bibliothek
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.3.12
+          arduino-cli lib install "Adafruit NeoPixel"
+
+      - name: Prüfen, dass keine Zugangsdaten im Sketch stehen
+        run: |
+          grep -q 'WLAN_NAME = ""' elektronik/pfeil_licht/pfeil_licht.ino
+          grep -q 'WLAN_PASS = ""' elektronik/pfeil_licht/pfeil_licht.ino
+          grep -q 'GITHUB_TOKEN = ""' elektronik/pfeil_licht/pfeil_licht.ino
+
+      - name: Kompilieren
+        run: |
+          arduino-cli compile --fqbn esp32:esp32:esp32c3:CDCOnBoot=cdc --output-dir build elektronik/pfeil_licht
+          ls -l build
+
+      - name: Firmware ins Repo
+        run: |
+          VER=$(sed -n 's/.*FIRMWARE_VERSION = "\([0-9.]*\)".*/\1/p' elektronik/pfeil_licht/pfeil_licht.ino | head -1)
+          echo "Version $VER"
+          test -n "$VER"
+          cp build/pfeil_licht.ino.bin firmware/pfeil_licht.bin
+          printf '%s\n' "$VER" > firmware/version.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add firmware/pfeil_licht.bin firmware/version.txt
+          if git diff --cached --quiet; then echo "nichts geändert"; exit 0; fi
+          git commit -m "Firmware $VER gebaut (automatisch)"
+          git push origin HEAD:main
