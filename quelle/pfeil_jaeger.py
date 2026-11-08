@@ -554,7 +554,6 @@ FH_R = FL_SPIGOT_R - FL_T - 0.15      # außen, leichte Klemmung im Kragen
 FH_T = 1.2
 FH_Z0, FH_Z1 = -18.0, FL_SPIGOT - 1.0  # Platte bei z = -18 (in der Flamme), Hülse bis knapp an den Anschlag
 FH_PLATE = 1.6
-FH_RIB_H, FH_RIB_Y = 2.5, 7.4          # Rinnen 6,2 mm breit zwischen Rippen bei y = -7,4 / 0 / +7,4
 FH_LEG = 4.0                            # Stege zwischen den Fenstern
 FH_WIN_TOP = 7.0                        # Fenster gerade so hoch, darüber 45°-Spitzbogen
 
@@ -563,21 +562,15 @@ def make_flame_holder():
     h = FH_Z1 - FH_Z0
     tube = cq.Workplane("XY").workplane(offset=FH_Z0).circle(FH_R).circle(FH_R - FH_T).extrude(h)
     plate = cq.Workplane("XY").workplane(offset=FH_Z0).circle(FH_R - 0.01).extrude(FH_PLATE)
-    # Gitterlöcher: in jeder Rinne eine Reihe 2,6 × 4,6 mm (Licht nach vorn in die Spitze, Kleber greift durch),
-    # außerhalb der Rippen eine Reihe 2,6 × 2,0 mm
-    for yc, hy in ((3.7, 2.3), (-3.7, 2.3), (9.6, 1.0), (-9.6, 1.0)):
-        for i in range(-3, 4):
-            x = i * 3.6
-            if math.hypot(abs(x) + 1.3, abs(yc) + hy) > FH_R - FH_T - 0.5:
-                continue
-            plate = plate.cut(box(x - 1.3, x + 1.3, yc - hy, yc + hy, FH_Z0 - 1, FH_Z0 + FH_PLATE + 1))
+    # Zwei durchgehende Schlitze 8 × 20 mm: die LED-Kapsel samt angelöteten Drähten wird von hinten durchgeschoben,
+    # liegt dann vorn in der Flamme und wird am Schlitz mit Heißkleber fixiert. Mittelsteg 3 mm.
+    inner = cq.Workplane("XY").workplane(offset=FH_Z0 - 1).circle(FH_R - FH_T - 0.6).extrude(FH_PLATE + 2)
+    for yc in (-5.5, 5.5):
+        plate = plate.cut(box(-12.0, 12.0, yc - 4.0, yc + 4.0, FH_Z0 - 1, FH_Z0 + FH_PLATE + 1).intersect(inner))
     body = tube.union(plate)
-    for y in (-FH_RIB_Y, 0.0, FH_RIB_Y):
-        body = body.union(box(-FH_R + 0.5, FH_R - 0.5, y - 0.6, y + 0.6, FH_Z0 + FH_PLATE - 0.01, FH_Z0 + FH_PLATE + FH_RIB_H)
-                          .intersect(cq.Workplane("XY").workplane(offset=FH_Z0).circle(FH_R - 0.3).extrude(10)))
     # Vier Fenster mit Spitzbogen (45°), Stege bei 45°, 135°, 225°, 315°
     half = (2 * math.pi * FH_R / 4 - FH_LEG) / 2 * 0.9     # halbe Sehne, etwas schmaler als der Bogen
-    z_a = FH_Z0 + FH_PLATE + FH_RIB_H + 0.4                  # Fenster beginnt über den Rippen
+    z_a = FH_Z0 + FH_PLATE + 0.4
     z_b = z_a + FH_WIN_TOP
     prof = [(-half, z_a), (half, z_a), (half, z_b), (0, z_b + half), (-half, z_b)]
     for ang in (0, 90, 180, 270):

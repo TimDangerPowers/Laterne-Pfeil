@@ -27,7 +27,7 @@ Alle Teile drucken **ohne Stützen**. Jedes Teil wurde Schicht für Schicht gepr
 | `druck-fussdeckel-links.stl` / `-rechts` | je 1 | Anthrazit | 26 × 10 × 1,2 | flach |
 | `druck-triebwerk.stl` | **2** | Hellgrau | 36 × 36 × 118 | Düse unten |
 | `druck-flamme.stl` | **2** | **Grau transparent** | 40 × 43 × 84 | Kragen unten, Brim |
-| `druck-flammenhalter.stl` | **2** | Grau transparent oder Hellgrau | 25 × 25 × 31 | Gitterplatte unten |
+| `druck-flammenhalter.stl` | **2** | Grau transparent oder Hellgrau | 25 × 25 × 31 | Platte unten |
 | `druck-kanone.stl` | **2** | **Grau transparent** | 14 × 16 × 76 | Mündung oben, Brim |
 | `druck-griff.stl` | 1 | Anthrazit | 101 × 39 × 37 | Oberseite unten |
 | `druck-griff-boden.stl` | 1 | Anthrazit | 96 × 34 × 13 | Platte unten, Sättel oben |
@@ -174,12 +174,12 @@ Alle Teile wurden im Modell paarweise auf Überschneidungen geprüft. Dabei kame
    1. Der Stecker liegt in der Mitte unter dem Deck-Schlitz. Nach vorn: **2 LEDs unter die Kanzel** (Schlaufe dazwischen).
    2. Durch das **vordere Kabelloch links** (102 mm vor dem Heck) in den offenen Kabelkanal des Flügels, in den Schacht im Kanonenfuß, dann durch den Tunnel im Zapfen in die **Kanone**. Eine LED kommt vorn an die Mündung, der Draht geht auf demselben Weg zurück. Erst dann die Kanone von vorn auf den Zapfen schieben (der Schlitz unten im Rohrfuß nimmt den Sockel unter dem Zapfen auf) und festkleben. Kanal- und Fußdeckel aufsetzen.
       *Kanonen, die vor dem 8.11.2026 gedruckt wurden, haben diesen Schlitz noch nicht und passen nicht über den Sockel: entweder die Kanone neu drucken oder den Sockel unter dem Zapfen mit dem Seitenschneider abknipsen und glatt feilen.*
-   3. Eine LED innen, dann durch das **hintere Kabelloch links** (40 mm vor dem Heck) durch das Loch im Triebwerkssockel ins Triebwerk und in die **Flamme**. Dort sitzt der **Flammenhalter** (siehe Schritt 6): Die Kette läuft durch ein Fenster des Halters hinein, **zwei LEDs** werden quer in die beiden Rinnen der Gitterplatte gelegt (Draht als Schlaufe dazwischen) und mit Heißkleber durch das Gitter festgeklebt, dann geht der Draht durch das gegenüberliegende Fenster zurück.
+   3. Eine LED innen, dann durch das **hintere Kabelloch links** (40 mm vor dem Heck) durch das Loch im Triebwerkssockel ins Triebwerk und in die **Flamme**. Dort sitzt der **Flammenhalter** (siehe Schritt 6): Die beiden LEDs der Flamme schiebst du von hinten durch die **zwei Schlitze** in seiner Platte (je 8 mm breit, LED mit angelöteten Drähten passt durch). Sie liegen dann vorn in der Flamme. Mit Heißkleber am Schlitz fixieren, die Drahtschlaufe dazwischen bleibt hinter der Platte.
    4. Quer durch den Rumpf, zwei LEDs als Innenlicht.
    5. Rechts genauso: erst Flamme, dann Kanone.
    6. Eine LED innen, dann nach vorn in die Nase: zwei LEDs von innen in die **Scheinwerferlöcher** (5,6 mm) in der Spitze drücken, mit einer Drahtschlaufe dazwischen.
    7. Der Rest der Kette bleibt aus. Wickel ihn locker und klebe ihn innen fest. Wenn alles läuft, kannst du die Kette 2 LEDs hinter dem letzten Scheinwerfer abschneiden. Das Ende mit Klebeband isolieren.
-6. **Flammenhalter und Flammen.** Der Flammenhalter ist eine kurze Hülse mit einer Gitterplatte: Er wird mit der Gitterplatte voran von hinten in den Kragen der Flamme geschoben, bis er bündig mit dem Kragen abschließt (die Platte sitzt dann 18 mm tief in der Flamme), und mit einem Tropfen Heißkleber am Kragen gesichert. Die vier Spitzbogenfenster lassen das Licht seitlich in die Flamme, das Gitter nach vorn in die Spitze. Die beiden LEDs legst du in die Rinnen (6 mm breit, die Kapseln passen genau) und klebst sie fest. Danach die Flamme von hinten in die Düse schieben, bis sie am Anschlag sitzt. Sie hält durch Klemmung.
+6. **Flammenhalter und Flammen.** Der Flammenhalter ist eine kurze Hülse mit einer Platte, die zwei breite Schlitze und einen Mittelsteg hat. Er wird mit der Platte voran von hinten in den Kragen der Flamme geschoben, bis er bündig mit dem Kragen abschließt (die Platte sitzt dann 18 mm tief in der Flamme), und mit einem Tropfen Heißkleber gesichert. Die vier Spitzbogenfenster lassen zusätzlich Licht seitlich in die Flamme. Danach die Flamme von hinten in die Düse schieben, bis sie am Anschlag sitzt. Sie hält durch Klemmung.
 7. **Kabel zum Griff:** Das JST-Verlängerungskabel läuft zusammen mit der Schnur durch den Schlitz im Deck (10 mm breit, der Stecker passt durch). Innen steckst du es direkt auf den Eingang der Kette. Damit ein Ruck nicht am Stecker zieht, das Kabel innen einmal locker um den Pfosten legen. Am Griff steckst du es auf den abgeschnittenen Stecker. So kannst du Schiff und Griff jederzeit trennen.
 
 ## Aufhängen und Ausbalancieren
