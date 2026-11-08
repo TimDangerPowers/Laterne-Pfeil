@@ -44,7 +44,7 @@
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
-const char* FIRMWARE_VERSION = "3.5";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "3.6";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 20000;  // so lange wird je Versuch aufs WLAN gewartet
 const uint32_t WLAN_PAUSE_MS  = 120000; // danach Pause, dann neuer Versuch im Hintergrund
@@ -86,6 +86,7 @@ struct Einstellungen {
   uint32_t flamme2;       // Flamme: Spitzenfarbe (heißester Teil)
   uint32_t kanzel;        // Kanzelfarbe
   uint32_t innen;         // Innenlicht
+  uint8_t  bK, bI, bH, bL, bF;   // Helligkeit je Bereich in Prozent: Kanzel, Innen, Scheinwerfer, Kanonen, Flammen
 } E;
 
 void standardEinstellungen() {
@@ -97,6 +98,19 @@ void standardEinstellungen() {
   E.flamme2 = 0xFF5A00;   // Orange
   E.kanzel  = 0x1478FF;
   E.innen   = 0xFF781E;
+  E.bK = E.bI = E.bH = E.bL = E.bF = 100;
+}
+
+// Faktor 0..1 für die Bereichshelligkeit einer LED
+float bereichsFaktor(char z) {
+  switch (z) {
+    case 'K': return E.bK / 100.0f;
+    case 'I': return E.bI / 100.0f;
+    case 'H': return E.bH / 100.0f;
+    case 'L': case 'R': return E.bL / 100.0f;
+    case 'F': case 'f': return E.bF / 100.0f;
+    default: return 1.0f;
+  }
 }
 
 const uint16_t MAX_MA      = 1000;   // Stromgrenze für alle LEDs (Powerbank und Kabel schonen)
@@ -249,6 +263,8 @@ void einstellungenLaden() {
   E.flamme2 = p.getUInt("fl2", E.flamme2);
   E.kanzel  = p.getUInt("kanzel", E.kanzel);
   E.innen   = p.getUInt("innen", E.innen);
+  E.bK = p.getUChar("bK", E.bK); E.bI = p.getUChar("bI", E.bI); E.bH = p.getUChar("bH", E.bH);
+  E.bL = p.getUChar("bL", E.bL); E.bF = p.getUChar("bF", E.bF);
   p.end();
 }
 
@@ -263,6 +279,8 @@ void einstellungenSpeichern() {
   p.putUInt("fl2", E.flamme2);
   p.putUInt("kanzel", E.kanzel);
   p.putUInt("innen", E.innen);
+  p.putUChar("bK", E.bK); p.putUChar("bI", E.bI); p.putUChar("bH", E.bH);
+  p.putUChar("bL", E.bL); p.putUChar("bF", E.bF);
   p.end();
   Serial.println("Einstellungen gespeichert");
 }
@@ -318,7 +336,14 @@ button.sek{background:#2a3040}
 <div class="zeile"><span>Flamme Spitze</span><input type="color" id="fl2"></div>
 <div class="zeile"><span>Kanzel</span><input type="color" id="kanzel"></div>
 <div class="zeile"><span>Innenlicht</span><input type="color" id="innen"></div>
-<div class="zeile"><span>Helligkeit</span><input type="range" id="hell" min="20" max="255"></div>
+</section>
+<section><h2>Helligkeit</h2>
+<div class="zeile"><span>Gesamt</span><input type="range" id="hell" min="20" max="255"></div>
+<div class="zeile"><span>Kanzel</span><input type="range" id="bK" min="0" max="100"></div>
+<div class="zeile"><span>Innenlicht</span><input type="range" id="bI" min="0" max="100"></div>
+<div class="zeile"><span>Scheinwerfer</span><input type="range" id="bH" min="0" max="100"></div>
+<div class="zeile"><span>Kanonen</span><input type="range" id="bL" min="0" max="100"></div>
+<div class="zeile"><span>Flammen</span><input type="range" id="bF" min="0" max="100"></div>
 </section>
 <section><h2>Testen</h2>
 <div class="btns"><button class="sek" onclick="api('fire')">Feuer</button><button class="sek" onclick="api('turbo')">Turbo</button><button class="sek" onclick="api('power')">An / Aus</button></div>
@@ -342,8 +367,8 @@ function zeichnen(){
   b.onclick=()=>{if(sel<0){$('msg').textContent='Erst eine LED antippen.';return}S.map=S.map.substring(0,sel)+k+S.map.substring(sel+1);api('map','map='+encodeURIComponent(S.map));sel=Math.min(sel+1,S.map.length-1);api('test','led='+sel);zeichnen()};zs.appendChild(b)}
 }
 function laden(){fetch('/api/state').then(r=>r.json()).then(s=>{S=s;$('ver').textContent='Firmware '+s.version;
- for(const k of ['laser','turbo','fl1','fl2','kanzel','innen'])$(k).value=hex(s[k]);$('hell').value=s.hell;zeichnen();$('msg').textContent=''})}
-for(const k of ['laser','turbo','fl1','fl2','kanzel','innen','hell'])$(k).oninput=()=>{const v=$(k).value;api('set',k+'='+encodeURIComponent(v))};
+ for(const k of ['laser','turbo','fl1','fl2','kanzel','innen'])$(k).value=hex(s[k]);for(const k of ['hell','bK','bI','bH','bL','bF'])$(k).value=s[k];zeichnen();$('msg').textContent=''})}
+for(const k of ['laser','turbo','fl1','fl2','kanzel','innen','hell','bK','bI','bH','bL','bF'])$(k).oninput=()=>{const v=$(k).value;api('set',k+'='+encodeURIComponent(v))};
 function speichern(){api('save').then(()=>$('msg').textContent='Gespeichert.')}
 laden();
 </script></body></html>)HTML";
@@ -351,7 +376,9 @@ laden();
 String stateJson() {
   String j = "{\"version\":\"" + String(FIRMWARE_VERSION) + "\",\"map\":\"" + String(E.map) + "\",\"hell\":" + String(E.hell);
   j += ",\"laser\":" + String(E.laser) + ",\"turbo\":" + String(E.turbo) + ",\"fl1\":" + String(E.flamme1);
-  j += ",\"fl2\":" + String(E.flamme2) + ",\"kanzel\":" + String(E.kanzel) + ",\"innen\":" + String(E.innen) + "}";
+  j += ",\"fl2\":" + String(E.flamme2) + ",\"kanzel\":" + String(E.kanzel) + ",\"innen\":" + String(E.innen);
+  j += ",\"bK\":" + String(E.bK) + ",\"bI\":" + String(E.bI) + ",\"bH\":" + String(E.bH);
+  j += ",\"bL\":" + String(E.bL) + ",\"bF\":" + String(E.bF) + "}";
   return j;
 }
 
@@ -388,6 +415,11 @@ void webStart() {
     if (server.hasArg("fl2"))    E.flamme2 = hexFarbe(server.arg("fl2"));
     if (server.hasArg("kanzel")) E.kanzel  = hexFarbe(server.arg("kanzel"));
     if (server.hasArg("innen"))  E.innen   = hexFarbe(server.arg("innen"));
+    if (server.hasArg("bK")) E.bK = constrain(server.arg("bK").toInt(), 0, 100);
+    if (server.hasArg("bI")) E.bI = constrain(server.arg("bI").toInt(), 0, 100);
+    if (server.hasArg("bH")) E.bH = constrain(server.arg("bH").toInt(), 0, 100);
+    if (server.hasArg("bL")) E.bL = constrain(server.arg("bL").toInt(), 0, 100);
+    if (server.hasArg("bF")) E.bF = constrain(server.arg("bF").toInt(), 0, 100);
     antwort(200, "{\"ok\":1}");
   });
   server.on("/api/fire",  HTTP_ANY, []() { feuer.pressed = true; antwort(200, "{\"ok\":1}"); });
@@ -635,6 +667,12 @@ void loop() {
   // Scheinwerfer blitzen beim Schuss kurz mit
   if (shotActive && now - shotStart < 60) {
     for (int i = 0; i < NUM; i++) if (E.map[i] == 'H') strip.setPixelColor(i, rgb(255, 255, 255));
+  }
+
+  // Helligkeit je Bereich (nach allen Effekten, vor der Test-LED)
+  for (int i = 0; i < NUM; i++) {
+    float f = bereichsFaktor(E.map[i]);
+    if (f < 0.999f) strip.setPixelColor(i, dim(strip.getPixelColor(i), f));
   }
 
   // Von der Webseite angetippte LED weiß zeigen
