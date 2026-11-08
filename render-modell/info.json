@@ -154,8 +154,8 @@
   "valid": true,
   "solids": 1,
   "druckgroesse_mm": [
-   63,
-   95,
+   62,
+   94,
    1
   ]
  },
@@ -164,8 +164,8 @@
   "valid": true,
   "solids": 1,
   "druckgroesse_mm": [
-   63,
-   95,
+   62,
+   94,
    1
   ]
  },
@@ -191,7 +191,7 @@
  },
  "_summe_g": 252,
  "_schwerpunkt_mm": [
-  52.6,
+  52.5,
   -0.2,
   -2.6
  ]

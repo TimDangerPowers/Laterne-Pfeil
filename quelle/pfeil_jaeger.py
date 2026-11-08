@@ -206,6 +206,8 @@ def make_hull_parts():
                         .intersect(box(-5, X_DECK, -100, 100, Z_SPLIT + 0.5 * k, Z_SPLIT + 0.5 * (k + 1) + 0.01)))
     for xc in CABLE_X:                # Aussparungen im Kragen vor den Kabellöchern
         lip = lip.cut(box(xc - 5, xc + 5, -100, 100, Z_SPLIT - LIP_H - 1, Z_SPLIT + 3))
+    for a, b in TABS:                 # Kragen über den Flügellaschen 1 mm kürzer (Laschen reichen bis z = -12,5)
+        lip = lip.cut(box(a - 1, b + 1, -100, 100, Z_SPLIT - LIP_H - 1, Z_SPLIT - LIP_H + 1.0))
     top = top.union(lip)
     # Anschlag vorn: Nase bekommt innen eine Leiste, an der die Oberschale vorn anliegt
     stop = hull(-T + 0.01, x0=X_DECK, x1=X_DECK + 2).cut(hull(-T - 3, x0=-10, x1=400))
@@ -346,7 +348,8 @@ def make_wing():
     def along(width, h, z0, extra):
         return cq.Workplane("XY").box(L + extra, width, h).translate((0, 0, z0 + h / 2))\
             .rotate((0, 0, 0), (0, 0, 1), ang).translate(((xa + xb) / 2, (ya + yb) / 2, 0))
-    w = w.union(along(DUCT_W + 3.0, 0.9 + DUCT_H + COVER_T, zg - 0.01, 2))          # läuft 1 mm in den Fuß hinein
+    # Kanalkörper endet 0,3 mm vor der Rumpfwand (sonst stößt seine Ecke in die Wand, Fehler bis 2026-11-08)
+    w = w.union(along(DUCT_W + 3.0, 0.9 + DUCT_H + COVER_T, zg - 0.01, 2).cut(hull(0.3, x0=-10, x1=400)))
     w = w.cut(along(DUCT_W, DUCT_H + COVER_T + 2, zg + 0.9, 8))                      # Kanal, läuft 4 mm in den Fuß
     blk_grow = box(GUN_X0 - 0.3, GUN_X1 + 0.3, GUN_Y - GUN_W / 2 - 0.3, GUN_Y + GUN_W / 2 + 0.3, zb - 1, zg + GUN_H + 1)
     w = w.cut(along(DUCT_W + 1.0, COVER_T + 2, zg + 0.9 + DUCT_H, 8).cut(blk_grow))  # Absatz für den Kanaldeckel
@@ -381,7 +384,7 @@ def make_covers():
     L = math.hypot(xb - xa, yb - ya)
     ang = math.degrees(math.atan2(yb - ya, xb - xa))
     zg = Z_WING + WING_T / 2
-    duct_cover = cq.Workplane("XY").box(L - 1.0, DUCT_W + 0.8, COVER_T).translate((0, 0, zg + 0.9 + DUCT_H + COVER_T / 2))\
+    duct_cover = cq.Workplane("XY").box(L - 2.0, DUCT_W + 0.8, COVER_T).translate((0, 0, zg + 0.9 + DUCT_H + COVER_T / 2))\
         .rotate((0, 0, 0), (0, 0, 1), ang).translate(((xa + xb) / 2, (ya + yb) / 2, 0))
     _, _, cover = foot_cover_shapes()
     foot_cover = cover.extrude(COVER_T).translate((0, 0, zg + GUN_H - COVER_T))
@@ -436,7 +439,8 @@ def make_grip():
         # innen eine Mulde, damit die Decke am Taster nur GRIP_BTN_PANEL dick ist (Schnapp-Taster rasten sonst nicht)
         g = g.cut(cyl_z(GRIP_BTN_RECESS / 2, GRIP_IN_H - 1, GRIP_H - GRIP_BTN_PANEL, grip_x(x), 0))
     for sx, sy in grip_screws():                    # Schraubdome für den Boden (M3 x 10, selbstschneidend)
-        g = g.union(cyl_z(4.0, 0, GRIP_IN_H + 0.5, sx, sy)).cut(cyl_z(1.3, -1, GRIP_IN_H - 4, sx, sy))
+        # Dome beginnen erst über dem Boden (sonst stößt die Bodenplatte an, Fehler bis 2026-11-08)
+        g = g.union(cyl_z(4.0, GRIP_LID, GRIP_IN_H + 0.5, sx, sy)).cut(cyl_z(1.3, -1, GRIP_IN_H - 4, sx, sy))
     g = g.cut(box(-GRIP_L / 2 - 1, -GRIP_IN_L / 2 + 1, -5, 5, 4, 12))                    # Kabel zum Schiff
     g = g.cut(box(GRIP_IN_L / 2 - 1, GRIP_L / 2 + 1, -6.5, 6.5, USB_Z - 4, USB_Z + 4))     # USB-C / Magnetstecker
     # kleine Pfeil-Markierung oben zwischen den Tastern (Schmuck)

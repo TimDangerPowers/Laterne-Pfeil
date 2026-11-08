@@ -145,6 +145,17 @@ Die Zuordnung geht am einfachsten über die Einstellseite (oben). Der Zählmodus
 2. FEUER schaltet eine LED weiter, TURBO eine zurück. Die Nummer steht im Seriellen Monitor (115200 Baud). Ohne PC zählst du einfach mit.
 3. Trag für jede LED den passenden Buchstaben in `LED_MAP` ein und lade den Code neu hoch.
 
+## Passungsprüfung (Stand 8.11.2026)
+
+Alle Teile wurden im Modell paarweise auf Überschneidungen geprüft. Dabei kamen vier Stellen heraus, die vorher nicht passten. Die Dateien sind korrigiert; wer die Teile schon gedruckt hat, hilft sich so:
+
+| Stelle | Fehler | Korrigiert in | Bei schon gedruckten Teilen |
+| --- | --- | --- | --- |
+| Kanone auf Zapfen | Sockel unter dem Zapfen steckte im Rohrfuß | `druck-kanone.stl` (Schlitz unten) | Kanone neu drucken oder Sockel unter dem Zapfen abknipsen |
+| Oberschale auf Flügellaschen | Kragen der Oberschale saß 0,5 mm auf den Laschen auf | `druck-rumpf-oben.stl` (Kragen über den Laschen 1 mm kürzer) | Schließt die Oberschale nicht ganz: Kragen unten an den drei Laschenstellen 1 mm mit dem Messer abnehmen |
+| Kabelkanal an der Rumpfwand | Ecke des Kanals ragte 1 mm in die Wand | `druck-fluegel-*.stl` | Sitzt der Flügel nicht bündig: Kanalende an der Wand 1 mm abfeilen |
+| Griffboden im Griff | Schraubdome reichten bis zur Bodenplatte | `druck-griff.stl` (Dome beginnen 2,4 mm höher) | Unten 2,5 mm von den vier Domen abschneiden oder Griff neu drucken |
+
 ## Zusammenbau Schiff
 
 1. **Papier einkleben.** Transparentpapier innen hinter die Fenster kleben: Oberschale (Deck, Schlitze, TONI), Unterschale (Bauch, Nase, Heckgitter) und Kanzel (Hellblau). Zum Ausschneiden gibt es die **Schnittvorlage** [`vorlagen/fenster-vorlage.pdf`](vorlagen/fenster-vorlage.pdf), zwei A4-Seiten in Originalgröße: mit **100 %** drucken (keine Anpassung an die Seite) und am Kontrollmaß (100 mm) prüfen. Vorlage auf das Transparentpapier legen, durchgezogene Linien schneiden, gestrichelte Linien falzen (alle zur selben Seite), graue Flächen sind die Fenster dahinter. Alle Teile sind 0,5 mm kleiner als der Innenraum, damit nichts aufsteht oder sich wellt.
