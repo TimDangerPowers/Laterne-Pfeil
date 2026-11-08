@@ -401,6 +401,9 @@ def make_cannon():
     c = c.union(hexx(BARREL_R + 1.2, BARREL_X1 - 7, BARREL_X1, GUN_Y, GUN_Z))        # Mündung
     c = c.union(hexx(BARREL_R + 0.5, GUN_X1, GUN_X1 + 5, GUN_Y, GUN_Z))             # Ring am Fuß
     c = c.cut(cylx(SPIGOT_R + CLEAR, GUN_X1 - 1, GUN_X1 + SPIGOT_L + 0.3, GUN_Y, GUN_Z))
+    # Schlitz unten für den Sockel unter dem Zapfen (7 mm breit, bis zur Achse): ohne ihn passt das Rohr nicht
+    # über den Zapfen (Fehler bis 2026-11-08). Das Rohr greift so von oben über den Zapfen und wird geklebt.
+    c = c.cut(box(GUN_X1 - 1, GUN_X1 + SPIGOT_L + 0.3, GUN_Y - 3.5 - CLEAR, GUN_Y + 3.5 + CLEAR, GUN_Z - 12, GUN_Z))
     c = c.cut(cylx(BARREL_BORE / 2, GUN_X1 + SPIGOT_L, BARREL_X1 - 0.8, GUN_Y, GUN_Z))
     for x in (90.0, 110.0):                                                          # Kühlrippen
         c = c.cut(hexx(BARREL_R + 1, x, x + 1.2, GUN_Y, GUN_Z).cut(hexx(BARREL_R - 0.5, x - 1, x + 3, GUN_Y, GUN_Z)))
