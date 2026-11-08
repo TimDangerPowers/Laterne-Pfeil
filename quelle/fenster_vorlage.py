@@ -315,10 +315,10 @@ def seite(pdf, teile, titel, hinweis=""):
     ax.set_aspect("equal")
     ax.axis("off")
     ax.text(15, 283, "Laterne „Pfeil“ – Schnittvorlage Fensterpapier · " + titel, fontsize=9, weight="bold")
-    ax.text(15, 278, "Mit 100 % drucken (keine Anpassung an die Seite). Kontrollmaß unten muss genau 100 mm sein. "
-            "Durchgezogen = schneiden, gestrichelt = falzen (alle Falze zur selben Seite, Papier wird zur Rinne), grau = Fenster dahinter.", fontsize=6, color="0.3")
-    if hinweis:
-        ax.text(15, 273, hinweis, fontsize=6, color="0.3")
+    import textwrap
+    txt = ("Mit 100 % drucken (keine Anpassung an die Seite). Kontrollmaß unten muss genau 100 mm sein. Durchgezogen = schneiden, "
+           "gestrichelt = falzen (alle Falze zur selben Seite, Papier wird zur Rinne), grau = Fenster dahinter. " + hinweis)
+    ax.text(15, 279, "\n".join(textwrap.wrap(txt, 150)), fontsize=6, color="0.3", va="top", linespacing=1.4)
     ax.plot([15, 115], [14, 14], color="black", lw=0.8)
     for x in (15, 115):
         ax.plot([x, x], [12.5, 15.5], color="black", lw=0.8)
