@@ -335,7 +335,7 @@ def main(out):
     k1, k2, k3 = teile_kanzel()
     dk, ba, se, he = teil_deck(), teil_bauch(), teil_seite(), teil_heck()
     with PdfPages(out) as pdf:
-        seite(pdf, [(k1, (25, 225)), (k2, (80, 225)), (k3, (140, 225)), (he, (105, 125)), (se, (20, 55)), (se, (120, 55))],
+        seite(pdf, [(k1, (25, 212)), (k2, (80, 212)), (k3, (140, 212)), (he, (105, 118)), (se, (20, 55)), (se, (120, 55))],
               "Seite 1: Kanzel, Heck, Seiten",
               "Kanzel: drei Stücke, sie stoßen auf den beiden Querstreben aneinander (Papier erst falzen, dann von unten "
               "in die Kanzel schieben und am Sims festkleben). Seitenwand: eine für links, eine für rechts.")
