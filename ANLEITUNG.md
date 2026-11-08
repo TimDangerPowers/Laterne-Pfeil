@@ -146,7 +146,12 @@ Die Zuordnung geht am einfachsten über die Einstellseite (oben). Der Zählmodus
 
 ## Zusammenbau Schiff
 
-1. **Papier einkleben.** Transparentpapier innen hinter die Fenster kleben: Oberschale (Deck, Schlitze, TONI), Unterschale (Bauch, Nase, Heckgitter) und Kanzel (Hellblau). Ein großes Stück pro Seite reicht.
+1. **Papier einkleben.** Transparentpapier innen hinter die Fenster kleben: Oberschale (Deck, Schlitze, TONI), Unterschale (Bauch, Nase, Heckgitter) und Kanzel (Hellblau). Zum Ausschneiden gibt es die **Schnittvorlage** [`vorlagen/fenster-vorlage.pdf`](vorlagen/fenster-vorlage.pdf), zwei A4-Seiten in Originalgröße: mit **100 %** drucken (keine Anpassung an die Seite) und am Kontrollmaß (100 mm) prüfen. Vorlage auf das Transparentpapier legen, durchgezogene Linien schneiden, gestrichelte Linien falzen (alle zur selben Seite), graue Flächen sind die Fenster dahinter. Alle Teile sind 0,5 mm kleiner als der Innenraum, damit nichts aufsteht oder sich wellt.
+   - **Kanzel:** drei Stücke (hinten, Mitte, vorn), sie stoßen auf den beiden Querstreben aneinander. Jedes Stück erst an den vier Linien falzen, dann von unten in die Kanzel schieben und am Sims mit dem Klebestift festkleben. Ein durchgehendes Stück geht nicht, weil sich die Kanzel zwischen den Streben in zwei Richtungen wölbt.
+   - **Deck:** ein Stück mit zwei Falzen (Deck → Fase → Wand), reicht vom Heck bis vor die Kanzel.
+   - **Seitenwände mit TONI:** zwei gleiche Trapeze, Papier ist durchsichtig, also einfach eins umdrehen.
+   - **Heckwand:** an der gestrichelten Trennlinie durchschneiden, oberer Teil in die Oberschale, unterer in die Unterschale.
+   - **Bauch:** ein Stück. Für die Nase (Lüftungsschlitze, Scheinwerfer) reichen Reststücke.
 2. **Flügel.** Die drei Laschen jedes Flügels von außen durch die Schlitze der Unterschale stecken und innen festkleben. Der Kabelkanal liegt oben, der Kanonenfuß zeigt nach vorn.
 3. **Triebwerke.** Den flachen Sockel jedes Triebwerks auf den Flügel kleben.
    - Die Düse ragt **38 mm hinter die Heckwand**.
