@@ -44,7 +44,7 @@
 const char* WLAN_NAME = "";          // Name deines WLANs. Leer = gespeicherte Daten verwenden (oder kein WLAN, falls nie eingetragen)
 const char* WLAN_PASS = "";          // Passwort. (Diese Datei mit Passwort nicht weitergeben.)
 const char* GITHUB_TOKEN = "";       // nur nötig, solange das Repo privat ist: Fine-grained Token mit Lesezugriff auf "Contents"
-const char* FIRMWARE_VERSION = "3.4";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
+const char* FIRMWARE_VERSION = "3.5";   // z. B. "2.1": wird bei jeder neuen Version hochgezählt, muss zu firmware/version.txt passen
 const char* UPDATE_URL = "https://raw.githubusercontent.com/TimDangerPowers/Laterne-Pfeil/main/firmware/";   // dort liegen version.txt und pfeil_licht.bin
 const uint32_t WLAN_WARTEN_MS = 20000;  // so lange wird je Versuch aufs WLAN gewartet
 const uint32_t WLAN_PAUSE_MS  = 120000; // danach Pause, dann neuer Versuch im Hintergrund
@@ -526,6 +526,9 @@ void statusZeile() {
 
 void setup() {
   Serial.begin(115200);
+#ifdef ESP32
+  Serial.setTxTimeoutMs(0);   // nie auf den USB-Port warten: ohne Monitor würde jede Ausgabe das Programm anhalten
+#endif
   delay(300);
   Serial.printf("\nPfeil startet, Firmware %s\n", FIRMWARE_VERSION);
   pinMode(PIN_FEUER, INPUT_PULLUP);
@@ -571,6 +574,7 @@ void loop() {
   // ---------------- Feuer: abwechselnd links/rechts, Dauerfeuer beim Halten
   if (bereit && (feuer.pressed || (feuer.down && now >= nextShot))) {
     shotActive = true; shotStart = now; nextShot = now + SCHUSS_MS; shotLeft = !shotLeft;
+    Serial.printf("Schuss %s bei %lu ms\n", shotLeft ? "links" : "rechts", (unsigned long)now);
   }
 
   for (int i = 0; i < NUM; i++) {
